@@ -1,6 +1,7 @@
 package com.shubham.chatsapp.controller;
 
 import com.shubham.chatsapp.dto.ChatDTO;
+import com.shubham.chatsapp.dto.ChatDetailsDTO;
 import com.shubham.chatsapp.dto.CreateChatRequest;
 import com.shubham.chatsapp.dto.GroupCreateRequest;
 import com.shubham.chatsapp.service.ChatService;
@@ -10,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -34,4 +36,30 @@ public class ChatController {
         String currentUserEmail = authentication.getName();
         return ResponseEntity.ok(chatService.getAllChats(currentUserEmail));
     }
+//    @GetMapping("/{chatId}")
+//    public ResponseEntity<ChatDetailsDTO> getChatDetails(
+//            @PathVariable UUID chatId,
+//            @RequestParam String currentUserEmail
+//    ) {
+//        ChatDetailsDTO dto = chatService.getPersonalChatDetails(chatId, currentUserEmail);
+//        return ResponseEntity.ok(dto);
+//    }
+//
+//    // For group chat
+//    @GetMapping("/group/{groupId}")
+//    public ResponseEntity<GroupChatDetailsDTO> getGroupChatDetails(
+//            @PathVariable UUID groupId
+//    ) {
+//        GroupChatDetailsDTO dto = chatService.getGroupChatDetails(groupId);
+//        return ResponseEntity.ok(dto);
+//    }
+
+    @GetMapping("/chat/{chatId}/details")
+    public ResponseEntity<ChatDetailsDTO> getChatDetails(
+            @PathVariable UUID chatId,
+            @RequestParam String currentUserEmail) {
+        ChatDetailsDTO details = chatService.getChatDetails(chatId, currentUserEmail);
+        return ResponseEntity.ok(details);
+    }
+
 }

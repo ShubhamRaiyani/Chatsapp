@@ -10,6 +10,7 @@ public class MessageDTO {
     private String content;
     private String senderUsername;
     private UUID chatId;
+    private UUID groupId;
     private LocalDateTime sentAt;
     private String messageType;
 

@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -13,10 +15,9 @@ public class Chat {
     @GeneratedValue
     private UUID id;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    private Message message;
+    @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Message> messages = new ArrayList<>();
 
     private Instant timestamp;
 
-    // You could add delivery status here in future
 }

@@ -16,20 +16,24 @@ public class Message {
     @Id
     @GeneratedValue
     private UUID id;
+
+    @ManyToOne
+    private Chat chat; // For personal chats
+
+    @ManyToOne
+    private Group group; // For group chats
+
     @ManyToOne
     private User sender;
 
     @ManyToOne
-    private User receiver;
-
-    @ManyToOne
-    private Group group;
+    private User receiver; // For personal messages only
 
     private String content;
-    //    private String messageType; // TEXT, IMAGE, VIDEO, etc.
+    private Instant createdAt;
+    private String messageType; // TEXT, IMAGE, VIDEO, etc.
 //    private String mediaUrl;
 //    private Boolean isEdited;
-    private Instant createdAt;
 
 
 }
