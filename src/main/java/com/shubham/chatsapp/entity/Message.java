@@ -1,10 +1,8 @@
 package com.shubham.chatsapp.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -18,15 +16,21 @@ public class Message {
     private UUID id;
 
     @ManyToOne
-    private Chat chat; // For personal chats
+    @JoinColumn(name = "chat_id")
+    @ToString.Exclude
+    private Chat chat;
+    // For personal chats
 
     @ManyToOne
-    private Group group; // For group chats
+    @JoinColumn(name = "group_id")
+    private Group group;
 
     @ManyToOne
+    @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
 
     @ManyToOne
+    @JoinColumn(name = "receiver_id")
     private User receiver; // For personal messages only
 
     private String content;

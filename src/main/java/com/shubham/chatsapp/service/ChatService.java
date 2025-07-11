@@ -118,11 +118,11 @@ public class ChatService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<Chat> personalChats = chatRepository.findAllPersonalChatsByUserId(user.getId());
-        List<Group> groups = groupRepository.findGroupsByMemberUserId(user.getId());
+        List<Group> groups = groupRepository.findGroupsByUserId(user.getId());
 
-        List<ChatDTO> chatDTOs = personalChats.stream()
+        List<ChatDTO> chatDTOs = new ArrayList<>(personalChats.stream()
                 .map(chat -> mapChatToDTO(chat, currentUserEmail))
-                .toList();
+                .toList());
 
         List<ChatDTO> groupChatDTOs = groups.stream()
                 .map(this::mapGroupToChatDTO)

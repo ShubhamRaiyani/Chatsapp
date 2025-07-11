@@ -1,7 +1,9 @@
 package com.shubham.chatsapp.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -15,7 +17,9 @@ public class Chat {
     @GeneratedValue
     private UUID id;
 
-    @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    @ToString.Exclude
     private List<Message> messages = new ArrayList<>();
 
     private Instant timestamp;

@@ -29,7 +29,7 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
-        return ((JwtBuilder)((JwtBuilder)((JwtBuilder)Jwts.builder().setSubject(userDetails.getUsername())).setIssuedAt(new Date())).setExpiration(new Date(System.currentTimeMillis() + this.jwtExpirationMs))).signWith(this.getSigningKey(), SignatureAlgorithm.HS256).compact();
+        return ((JwtBuilder) ((JwtBuilder) ((JwtBuilder) Jwts.builder().subject(userDetails.getUsername())).issuedAt(new Date())).expiration(new Date(System.currentTimeMillis() + this.jwtExpirationMs))).signWith(this.getSigningKey(), SignatureAlgorithm.HS256).compact();
     }
 
     public String extractEmail(String token) {

@@ -5,15 +5,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class SummaryDTO {
-    private Long id;
-    private Long chatID;
+    private UUID id;
+    private UUID chatID;
     private String summaryText;
-    private String generatedBy; // "AI" or "Manual"
     private LocalDateTime generatedAt;
 
 }

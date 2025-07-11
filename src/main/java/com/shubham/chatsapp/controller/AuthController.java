@@ -20,6 +20,10 @@ import org.springframework.web.server.ResponseStatusException;
 public class AuthController {
     private final AuthService authService;
 
+    @Generated
+    public AuthController(final AuthService authService) {
+        this.authService = authService;
+    }
     @PostMapping({"/register"})
     public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
         this.authService.registerUser(request);
@@ -41,8 +45,4 @@ public class AuthController {
         return this.authService.verify(req);
     }
 
-    @Generated
-    public AuthController(final AuthService authService) {
-        this.authService = authService;
-    }
 }

@@ -3,6 +3,7 @@ package com.shubham.chatsapp.repository;
 import com.shubham.chatsapp.entity.Chat;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,12 +13,22 @@ import java.util.UUID;
 @Repository
 public interface ChatRepository extends JpaRepository<Chat, UUID> {
     @Query("""
-    select c from Chat c
-left join c.message m
-where (m.sender.id = :userId1 and m.receiver.id = :userId2)
-or (m.sender.id = :userId2 and m.receiver.id = :userId1)
+    SELECT c FROM Chat c
+    LEFT JOIN FETCH c.messages
+    WHERE :user1Id IN (
+        SELECT m.sender.id FROM Message m WHERE m.chat = c
+    )
+    AND :user2Id IN (
+        SELECT m.receiver.id FROM Message m WHERE m.chat = c
+    )
 """)
-    Optional<Chat> findPersonalChatBetweenUsers(UUID id, UUID id1);
+    Optional<Chat> findPersonalChatBetweenUsers(@Param("user1Id") UUID user1Id, @Param("user2Id") UUID user2Id);
 
-    List<Chat> findAllPersonalChatsByUserId(UUID id);
+
+    @Query("""
+    SELECT DISTINCT c FROM Chat c
+    JOIN c.messages m
+    WHERE m.sender.id = :userId OR m.receiver.id = :userId
+""")
+    List<Chat> findAllPersonalChatsByUserId(@Param("userId") UUID userId);
 }

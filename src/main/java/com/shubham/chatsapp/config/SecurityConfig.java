@@ -36,7 +36,16 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.cors(Customizer.withDefaults()).csrf(AbstractHttpConfigurer::disable).authorizeHttpRequests((authorizeRequests) -> ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)authorizeRequests.requestMatchers(new String[]{"/api/auth/**", "/oauth2/**", "/login/**"})).permitAll().anyRequest()).authenticated()).sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).oauth2Login((oauth2) -> oauth2.loginPage("/oauth2/authorization/google").successHandler(this.oAuthLoginSuccessHandler)).authenticationProvider(this.authenticationProvider()).addFilterBefore(this.jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http
+                .cors(Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests((authorizeRequests) ->
+                        ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)authorizeRequests
+                        .requestMatchers(new String[]{"/api/auth/**", "/oauth2/**", "/login/**","/ws/**"}))
+                        .permitAll()
+                        .anyRequest())
+                                .authenticated())
+                .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).oauth2Login((oauth2) -> oauth2.loginPage("/oauth2/authorization/google").successHandler(this.oAuthLoginSuccessHandler)).authenticationProvider(this.authenticationProvider()).addFilterBefore(this.jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return (SecurityFilterChain)http.build();
     }
 

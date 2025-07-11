@@ -14,16 +14,22 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/messages")
-@RequiredArgsConstructor
 public class MessageController {
 
 //    GET /api/messages/chat/{chatId}?page=0&size=20
 //            → Returns page of personal chat messages.
+
+
 //
 //    GET /api/messages/group/{groupId}?page=1&size=10
 //            → Returns page 1 of group chat messages.
 
+
     private final MessageService messageService;
+
+    public MessageController(MessageService messageService) {
+        this.messageService = messageService;
+    }
 
     @GetMapping("/chat/{chatId}")
     public Page<MessageDTO> getChatMessages(

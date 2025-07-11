@@ -108,6 +108,13 @@
 			<artifactId>spring-boot-starter-mail</artifactId>
 			<version>3.4.5</version>
 		</dependency>
+		<dependency>
+			<groupId>com.cohere</groupId>
+			<artifactId>cohere-java</artifactId>
+			<version>1.7.0</version>
+		</dependency>
+
+
 	</dependencies>
 
 	<build>

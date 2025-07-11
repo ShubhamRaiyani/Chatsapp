@@ -7,21 +7,27 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
 
 @Controller
-@RequiredArgsConstructor
 public class WebSocketController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final MessageService messageService;
 
+    public WebSocketController(SimpMessagingTemplate messagingTemplate, MessageService messageService) {
+        this.messagingTemplate = messagingTemplate;
+        this.messageService = messageService;
+    }
+
     @MessageMapping("/chat.send") // From client to /app/chat.send
-    public void handleSendMessage(@Payload MessageDTO messageDTO, Principal principal) {
+    public void handleSendMessage(@Payload MessageDTO messageDTO) {
         // Save to DB
-        MessageDTO savedMessage = messageService.sendMessage(messageDTO, principal.getName());
+        System.out.println(">>>>> handleSendMessage called");
+        MessageDTO savedMessage = messageService.sendMessage(messageDTO);
 
         // Broadcast to all clients subscribed to the chat
         if (messageDTO.getChatId() != null) {
