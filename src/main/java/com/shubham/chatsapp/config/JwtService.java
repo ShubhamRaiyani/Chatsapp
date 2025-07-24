@@ -10,6 +10,8 @@ import java.security.Key;
 import java.util.Date;
 import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -56,5 +58,9 @@ public class JwtService {
 
     private Claims extractAllClaims(String token) {
         return (Claims)Jwts.parser().setSigningKey(this.getSigningKey()).build().parseClaimsJws(token).getBody();
+    }
+    public Authentication getAuthentication(String token) {
+        String email = extractEmail(token);
+        return new UsernamePasswordAuthenticationToken(email, null, null);
     }
 }

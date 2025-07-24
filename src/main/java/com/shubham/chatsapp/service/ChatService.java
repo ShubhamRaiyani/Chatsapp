@@ -49,6 +49,8 @@ public class ChatService {
         // Create new chat
         Chat chat = new Chat();
         chat.setTimestamp(Instant.now());
+        chat.setUser1(user1);
+        chat.setUser2(user2);
 
         // Create welcome message
         Message welcomeMessage = new Message();
@@ -60,6 +62,8 @@ public class ChatService {
 
         // Add message to chat
         chat.getMessages().add(welcomeMessage);
+
+
 
         // Save chat (cascade saves message too)
         Chat savedChat = chatRepository.save(chat);

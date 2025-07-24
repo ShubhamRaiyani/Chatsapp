@@ -28,6 +28,7 @@ public class AuthController {
     public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
         this.authService.registerUser(request);
         return ResponseEntity.ok("Check your email for verification link.");
+
     }
 
     @GetMapping({"/verify"})

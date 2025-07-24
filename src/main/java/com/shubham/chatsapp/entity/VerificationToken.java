@@ -1,10 +1,6 @@
-package com.shubham.chatsapp.dto;
+package com.shubham.chatsapp.entity;
 
-import com.shubham.chatsapp.entity.User;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -24,7 +20,9 @@ public class VerificationToken {
     private String token;
 
     @OneToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;
+
 
     private Instant expiryDate;
     public VerificationToken(String token, User user, Instant expiryDate) {

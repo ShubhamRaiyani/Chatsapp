@@ -1,14 +1,9 @@
 package com.shubham.chatsapp.service;
 
 import com.shubham.chatsapp.dto.MessageDTO;
-import com.shubham.chatsapp.entity.Chat;
-import com.shubham.chatsapp.entity.Group;
-import com.shubham.chatsapp.entity.Message;
-import com.shubham.chatsapp.entity.User;
-import com.shubham.chatsapp.repository.ChatRepository;
-import com.shubham.chatsapp.repository.GroupRepository;
-import com.shubham.chatsapp.repository.MessageRepository;
-import com.shubham.chatsapp.repository.UserRepository;
+import com.shubham.chatsapp.entity.*;
+import com.shubham.chatsapp.enums.StatusType;
+import com.shubham.chatsapp.repository.*;
 
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -19,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.UUID;
 
 @Service
@@ -34,25 +30,29 @@ public class MessageService {
     private final UserRepository userRepository;
     private final ChatRepository chatRepository;
     private final GroupRepository groupRepository;
-
-    public MessageService(MessageRepository messageRepository, UserRepository userRepository, ChatRepository chatRepository, GroupRepository groupRepository) {
+    private final MessageStatusRepository messageStatusRepository;
+    public MessageService(MessageRepository messageRepository, UserRepository userRepository, ChatRepository chatRepository, GroupRepository groupRepository, MessageStatusRepository messageStatusRepository) {
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.chatRepository = chatRepository;
         this.groupRepository = groupRepository;
+        this.messageStatusRepository = messageStatusRepository;
     }
 
     @Transactional
-    public MessageDTO sendMessage(MessageDTO request) {
+    public MessageDTO sendMessage(MessageDTO request) { // saving
         User sender = userRepository.findByEmail(request.getSenderEmail())
                 .orElseThrow(() -> new UsernameNotFoundException("Sender not found"));
-
+        User receiver = userRepository.findByEmail(request.getReceiverEmail())
+                .orElseThrow(() -> new UsernameNotFoundException("reciver not found"));
         Message message = new Message();
         message.setContent(request.getContent());
         message.setCreatedAt(Instant.now());
         message.setSender(sender);
+        message.setReceiver(receiver);
         message.setMessageType(request.getMessageType());
         System.out.println(">>>>> sendMessage() called with email: ");
+
         if (request.getChatId() != null) {
             Chat chat = chatRepository.findById(request.getChatId())
                     .orElseThrow(() -> new IllegalArgumentException("Chat not found"));
@@ -65,9 +65,18 @@ public class MessageService {
             throw new IllegalArgumentException("chatId or groupId must be provided");
         }
         System.out.println(">>> Saving message to chat: " + message.getChat());
-        Message saved = messageRepository.save(message);
-        System.out.println(">>> Message saved: " + saved.getId());
-        return mapToDTO(saved);
+        Message savedMessage = messageRepository.save(message);
+        System.out.println(">>> Message saved: " + savedMessage.getId());
+
+        //Here where we mark initial status as SENT
+        MessageStatus status = new MessageStatus();
+        status.setMessage(savedMessage);
+        status.setUser(message.getReceiver());
+        status.setStatus(StatusType.SENT);
+        status.setUpdatedAt(Instant.now());
+        MessageStatus savedStatus = messageStatusRepository.save(status);
+        System.out.println(">>> Messagestatus saved: " + savedStatus.getMessage().getId());
+        return mapToDTO(savedMessage);
 
     }
 
@@ -103,6 +112,7 @@ public class MessageService {
 
     private MessageDTO mapToDTO(Message message) {
         MessageDTO dto = new MessageDTO();
+        dto.setMessageId(message.getId());
         dto.setContent(message.getContent());
         dto.setSenderEmail(message.getSender().getEmail());
         dto.setChatId(message.getChat() != null ? message.getChat().getId() : null);
@@ -111,6 +121,17 @@ public class MessageService {
         dto.setMessageType(message.getMessageType());
         return dto;
     }
+
+    public Message getMessageFromMessageDTO(MessageDTO savedMessageDTO) {
+        Message message = messageRepository.findById(savedMessageDTO.getMessageId())
+                .orElseThrow(()-> new IllegalArgumentException("Messagedto to message failed"));
+        return message;
+    }
+
+//    private Message mapDtoToMessage(MessageDTO messageDTO){
+//        Message message = new Message();
+//        message.set
+//    }
 
 
 }

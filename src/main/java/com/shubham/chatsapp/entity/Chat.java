@@ -21,6 +21,12 @@ public class Chat {
     @JsonManagedReference
     @ToString.Exclude
     private List<Message> messages = new ArrayList<>();
+    @ManyToOne
+    @JoinColumn(name = "user1")
+    private User user1;
+    @ManyToOne
+    @JoinColumn(name = "user2")
+    private User user2;
 
     private Instant timestamp;
 

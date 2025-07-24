@@ -1,6 +1,6 @@
 package com.shubham.chatsapp.repository;
 
-import com.shubham.chatsapp.dto.VerificationToken;
+import com.shubham.chatsapp.entity.VerificationToken;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;

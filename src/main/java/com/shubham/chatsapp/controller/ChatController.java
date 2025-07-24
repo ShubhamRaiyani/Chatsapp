@@ -32,7 +32,7 @@ public class ChatController {
         return ResponseEntity.ok(chatService.createGroupChat(creatorEmail, request));
     }
 
-    @GetMapping
+    @GetMapping   // dashboard chats
     public ResponseEntity<List<ChatDTO>> getAllChats(Authentication authentication) {
         String currentUserEmail = authentication.getName();
         return ResponseEntity.ok(chatService.getAllChats(currentUserEmail));

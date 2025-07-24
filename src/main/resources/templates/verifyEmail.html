@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Verify Your Email - ChatsApp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* Base Reset */
+        body, table, td, a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        table {
+            border-collapse: collapse !important;
+        }
+        img {
+            border: 0;
+            line-height: 100%;
+            text-decoration: none;
+            max-width: 100%;
+        }
+        body {
+            width: 100% !important;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f6f8;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .email-wrapper {
+            width: 100%;
+            background-color: #f4f6f8;
+            padding: 20px 0;
+        }
+
+        .email-content {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .email-header {
+            background-color: #4a90e2;
+            color: #ffffff;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .email-header h1 {
+            margin: 0;
+            font-size: 26px;
+        }
+
+        .email-body {
+            padding: 32px 24px;
+        }
+
+        .email-body h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        .email-body p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .verify-button {
+            display: inline-block;
+            padding: 12px 24px;
+            margin-top: 20px;
+            background-color: #4a90e2;
+            color: #000000 !important;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .email-footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .email-body {
+                padding: 20px 16px;
+            }
+
+            .email-header h1 {
+                font-size: 22px;
+            }
+
+            .email-body h2 {
+                font-size: 18px;
+            }
+
+            .verify-button {
+                padding: 10px 18px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="email-wrapper">
+    <div class="email-content">
+        <div class="email-header">
+            <h1>ChatsApp</h1>
+        </div>
+        <div class="email-body">
+            <h2>Hello <span th:text="${username}">User</span>,</h2>
+            <p>
+                Thank you for registering with <strong>ChatsApp</strong>! Please verify your email address by clicking the button below.
+            </p>
+            <p style="text-align: center;">
+                <a th:href="${verificationUrl}" class="verify-button">Verify Email</a>
+            </p>
+            <p>
+                If you didn’t create a ChatsApp account, you can safely ignore this email.
+            </p>
+        </div>
+        <div class="email-footer">
+            &copy; 2025 ChatsApp. All rights reserved.
+        </div>
+    </div>
+</div>
+</body>
+</html>
