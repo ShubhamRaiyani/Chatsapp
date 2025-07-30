@@ -40,8 +40,8 @@ public class MessageService {
     }
 
     @Transactional
-    public MessageDTO sendMessage(MessageDTO request) { // saving
-        User sender = userRepository.findByEmail(request.getSenderEmail())
+    public MessageDTO sendMessage(MessageDTO request ,String senderEmail) { // saving
+        User sender = userRepository.findByEmail(senderEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("Sender not found"));
         User receiver = userRepository.findByEmail(request.getReceiverEmail())
                 .orElseThrow(() -> new UsernameNotFoundException("reciver not found"));
@@ -114,7 +114,7 @@ public class MessageService {
         MessageDTO dto = new MessageDTO();
         dto.setMessageId(message.getId());
         dto.setContent(message.getContent());
-        dto.setSenderEmail(message.getSender().getEmail());
+//        dto.setSenderEmail(message.getSender().getEmail());
         dto.setChatId(message.getChat() != null ? message.getChat().getId() : null);
         dto.setGroupId(message.getGroup() != null ? message.getGroup().getId() : null);
         dto.setSentAt(message.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime());

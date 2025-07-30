@@ -45,9 +45,16 @@ public class WebSocketController {
 
     @MessageMapping("/chat.send") // From client to /app/chat.send
     public void handleSendMessage(@Payload MessageDTO messageDTO,Authentication authentication) {
+        String authenticatedEmail = authentication.getName();
+//
+//        // Optionally, compare and enforce
+//        if (!authenticatedEmail.equals(messageDTO.getSenderEmail())) {
+//            throw new SecurityException("Sender spoofing attempt detected!");
+//        }
+
         // Save to DB
         System.out.println(">>>>> handleSendMessage called");
-        MessageDTO savedMessageDTO = messageService.sendMessage(messageDTO);
+        MessageDTO savedMessageDTO = messageService.sendMessage(messageDTO,authenticatedEmail);
         Message savedMessage = messageService.getMessageFromMessageDTO(savedMessageDTO);
 
         User receiverUser = userRepository.findByEmail(messageDTO.getReceiverEmail()).orElseThrow(() -> new UsernameNotFoundException("User not found"));;
@@ -63,7 +70,6 @@ public class WebSocketController {
         if (sessionTracker.isUserConnected(uuidRecieverUserId)) {
             if (sessionTracker.isUserSubscribedToChat(uuidRecieverUserId, savedMessage.getChat().getId())) {
                 messageStatusService.markRead(savedMessage, receiverUser);
-                System.out.println("ahiya pochi gyo");
             } else {
                 messageStatusService.markDelivered(savedMessage,receiverUser);
             }

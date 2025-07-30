@@ -51,15 +51,15 @@ public class WebSocketEventListener {
         if (destination != null && userId != null && destination.startsWith("/topic/chat/")) {
             String chatId = destination.substring("/topic/chat/".length());
             log.info("Chatid check {} and user id {} ", chatId,userId);
-            User byEmail = userRepository.findByEmail(userId).orElseThrow(()-> new IllegalArgumentException("Email from the websocket is not valid"));
-            tracker.addSubscription(sessionId, byEmail.getId(), UUID.fromString(chatId));
-            messageStatusService.markAllMessagesAsRead(UUID.fromString(chatId), byEmail.getId()); //  userid = email
-        }
+        User byEmail = userRepository.findByEmail(userId).orElseThrow(()-> new IllegalArgumentException("Email from the websocket is not valid"));
+        tracker.addSubscription(sessionId, byEmail.getId(), UUID.fromString(chatId));
+        messageStatusService.markAllMessagesAsRead(UUID.fromString(chatId), byEmail.getId()); //  userid = email
     }
+}
 
-    @EventListener
-    public void handleDisconnect(@Nonnull SessionDisconnectEvent event) {
-        log.info("DISCONNECT EVENT RECEIVED");
+@EventListener
+public void handleDisconnect(@Nonnull SessionDisconnectEvent event) {
+    log.info("DISCONNECT EVENT RECEIVED");
 
         StompHeaderAccessor sha = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = sha.getSessionId();

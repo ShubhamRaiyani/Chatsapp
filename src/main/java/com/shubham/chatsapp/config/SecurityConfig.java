@@ -2,6 +2,8 @@ package com.shubham.chatsapp.config;
 
 
 import java.util.List;
+
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.Generated;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +24,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -40,12 +43,15 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((authorizeRequests) ->
-                        ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)authorizeRequests
-                        .requestMatchers(new String[]{"/api/auth/**", "/oauth2/**", "/login/**","/ws/**"}))
-                        .permitAll()
-                        .anyRequest())
+                        ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) authorizeRequests
+                                .requestMatchers(new String[]{"/api/auth/**", "/oauth2/**", "/login/**", "/ws"}))
+                                .permitAll()
+                                .anyRequest())
                                 .authenticated())
-                .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).oauth2Login((oauth2) -> oauth2.loginPage("/oauth2/authorization/google").successHandler(this.oAuthLoginSuccessHandler)).authenticationProvider(this.authenticationProvider()).addFilterBefore(this.jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).oauth2Login((oauth2) -> oauth2.loginPage("/oauth2/authorization/google").successHandler(this.oAuthLoginSuccessHandler)).authenticationProvider(this.authenticationProvider()).addFilterBefore(this.jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class).exceptionHandling()
+                .defaultAuthenticationEntryPointFor(
+                        (request, response, authException) ->
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED), new AntPathRequestMatcher("/api/**"));
         return (SecurityFilterChain)http.build();
     }
 

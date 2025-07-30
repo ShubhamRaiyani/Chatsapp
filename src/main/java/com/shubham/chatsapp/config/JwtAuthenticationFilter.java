@@ -3,6 +3,7 @@ package com.shubham.chatsapp.config;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -23,23 +24,45 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.customUserDetailsService = customUserDetailsService;
     }
 
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
+        String jwt = null;
+
+        // 1. FIRST: Try to get JWT from AUTH-TOKEN header
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String jwt = authHeader.substring(7);
+            jwt = authHeader.substring(7);
+        }
+
+        // 2. IF NOT FOUND: Try to get JWT from a cookie
+        if (jwt == null && request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("AUTH-TOKEN".equals(cookie.getName())) {
+                    jwt = cookie.getValue();
+                }
+            }
+        }
+
+        if (jwt != null) {
             String email = this.jwtService.extractEmail(jwt);
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.customUserDetailsService.loadUserByUsername(email);
                 if (this.jwtService.isTokenValid(jwt, userDetails)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, (Object)null, userDetails.getAuthorities());
-                    authToken.setDetails((new WebAuthenticationDetailsSource()).buildDetails(request));
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    System.out.println("validd");
                 }
             }
 
-            chain.doFilter(request, response);
-        } else {
-            chain.doFilter(request, response);
-        }
+
+        chain.doFilter(request, response);
+
+    } else
+    {
+        chain.doFilter(request, response);
     }
-}
+}}
+
+

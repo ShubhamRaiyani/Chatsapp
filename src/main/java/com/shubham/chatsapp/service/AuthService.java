@@ -9,10 +9,12 @@ import com.shubham.chatsapp.entity.VerificationToken;
 import com.shubham.chatsapp.entity.User;
 import com.shubham.chatsapp.repository.UserRepository;
 import com.shubham.chatsapp.repository.VerificationTokenRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -79,8 +81,8 @@ public class AuthService {
         userRepository.save(user);
 
         String token = UUID.randomUUID().toString();
-        VerificationToken verificationToken = new VerificationToken(
-                token, user, Instant.now().plus(1, ChronoUnit.DAYS));
+        VerificationToken verificationToken =
+                new VerificationToken(token, user, Instant.now().plus(1, ChronoUnit.DAYS));
 
         VerificationToken savedToken = tokenRepository.save(verificationToken);
 
@@ -105,17 +107,30 @@ public class AuthService {
         user.setEnabled(true);
         userRepository.save(user);
 
-//        tokenRepository.delete(verificationToken); // Optional
+//        tokenRepository.delete(verificationToken);
     }
 
-    public ResponseEntity<AuthResponse> verify(LoginRequest request) {
+    public ResponseEntity<AuthResponse> loginVerify(LoginRequest request, HttpServletResponse response) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
         UserDetails user = userDetailsService.loadUserByUsername(request.getEmail());
         String jwtToken = jwtService.generateToken(user);
-        return ResponseEntity.ok(new AuthResponse(jwtToken, request.getEmail()) {
-        });
+
+        // Create secure HttpOnly cookie for the JWT
+        ResponseCookie jwtCookie = ResponseCookie.from("AUTH-TOKEN", jwtToken)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")       // Or "Lax" depending on your needs
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .build();
+
+        // Add Set-Cookie to response header
+        response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+
+        // Optionally, you can omit returning the JWT in the body for extra security
+        return ResponseEntity.ok(new AuthResponse(null, request.getEmail()));
     }
 }

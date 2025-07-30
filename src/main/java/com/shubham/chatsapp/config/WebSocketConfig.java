@@ -38,29 +38,29 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .withSockJS(); // Enable SockJS fallback
     }
 
-    @Override
-    public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(new ChannelInterceptor() {
-            @Override
-            public Message<?> preSend(Message<?> message, MessageChannel channel) {
-                StompHeaderAccessor accessor =
-                        MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-
-                if (accessor != null && accessor.getUser() == null) {
-                    List<String> authHeader = accessor.getNativeHeader("Authorization");
-
-                    if (authHeader != null && !authHeader.isEmpty()) {
-                        try {
-                            String token = authHeader.get(0).replace("Bearer ", "");
-                            Authentication authentication = jwtService.getAuthentication(token);
-                            accessor.setUser(authentication); // ✅ Inject user into WebSocket session
-                        } catch (Exception e) {
-                            System.out.println("JWT error: " + e.getMessage());
-                        }
-                    }
-                }
-                return message;
-            }
-        });
-    }
+//    @Override
+//    public void configureClientInboundChannel(ChannelRegistration registration) {
+//        registration.interceptors(new ChannelInterceptor() {
+//            @Override
+//            public Message<?> preSend(Message<?> message, MessageChannel channel) {
+//                StompHeaderAccessor accessor =
+//                        MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+//
+//                if (accessor != null && accessor.getUser() == null) {
+//                    List<String> authHeader = accessor.getNativeHeader("Authorization");
+//
+//                    if (authHeader != null && !authHeader.isEmpty()) {
+//                        try {
+//                            String token = authHeader.get(0).replace("Bearer ", "");
+//                            Authentication authentication = jwtService.getAuthentication(token);
+//                            accessor.setUser(authentication); // ✅ Inject user into WebSocket session
+//                        } catch (Exception e) {
+//                            System.out.println("JWT error: " + e.getMessage());
+//                        }
+//                    }
+//                }
+//                return message;
+//            }
+//        });
+//    }
 }

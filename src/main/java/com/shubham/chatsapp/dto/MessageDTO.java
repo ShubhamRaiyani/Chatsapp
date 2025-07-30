@@ -10,7 +10,7 @@ import java.util.UUID;
 public class MessageDTO {
     private UUID messageId;
     private String content;
-    private String senderEmail;
+//    private String senderEmail;
     private String receiverEmail;
     private UUID chatId;
     private UUID groupId;

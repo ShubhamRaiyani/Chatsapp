@@ -1,6 +1,5 @@
 package com.shubham.chatsapp.service;
 
-import com.shubham.chatsapp.dto.MessageDTO;
 import com.shubham.chatsapp.entity.Message;
 import com.shubham.chatsapp.entity.MessageStatus;
 import com.shubham.chatsapp.entity.User;

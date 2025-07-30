@@ -136,7 +136,7 @@ public class ChatService {
         return chatDTOs;
     }
 
-    private ChatDTO mapChatToDTO(Chat chat, String currentUserEmail) {
+    private ChatDTO mapChatToDTO(Chat chat, String currentUserEmail)    {
         ChatDTO dto = new ChatDTO();
         dto.setId(chat.getId());
         dto.setGroup(false);
