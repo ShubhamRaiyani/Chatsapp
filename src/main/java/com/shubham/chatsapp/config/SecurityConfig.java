@@ -48,7 +48,15 @@ public class SecurityConfig {
                                 .permitAll()
                                 .anyRequest())
                                 .authenticated())
-                .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).oauth2Login((oauth2) -> oauth2.loginPage("/oauth2/authorization/google").successHandler(this.oAuthLoginSuccessHandler)).authenticationProvider(this.authenticationProvider()).addFilterBefore(this.jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class).exceptionHandling()
+                .sessionManagement((session) ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2Login((oauth2) -> oauth2.loginPage("/oauth2/authorization/google")
+                        .successHandler(this.oAuthLoginSuccessHandler))
+                .authenticationProvider(this.authenticationProvider())
+                .addFilterBefore(this.jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling()
+
+
                 .defaultAuthenticationEntryPointFor(
                         (request, response, authException) ->
                                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED), new AntPathRequestMatcher("/api/**"));

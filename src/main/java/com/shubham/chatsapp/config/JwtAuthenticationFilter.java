@@ -55,14 +55,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     System.out.println("validd");
                 }
             }
-
+        }
 
         chain.doFilter(request, response);
 
-    } else
-    {
-        chain.doFilter(request, response);
-    }
+
 }}
 
 
