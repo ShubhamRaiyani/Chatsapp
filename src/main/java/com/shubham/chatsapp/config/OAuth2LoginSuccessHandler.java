@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Instant;
 import lombok.Generated;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
@@ -18,6 +19,9 @@ import org.springframework.stereotype.Component;
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final JwtService jwtService;
     private final UserRepository userRepository;
+
+    @Value("${frontend.url}")
+    private String frontendURL;
 
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         DefaultOAuth2User oauthUser = (DefaultOAuth2User)authentication.getPrincipal();
@@ -37,7 +41,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             });
             UserDetails userDetails = org.springframework.security.core.userdetails.User.withUsername(user.getEmail()).password("").authorities(new String[]{"USER"}).build();
             String token = this.jwtService.generateToken(userDetails);
-            response.sendRedirect("http://localhost:5173/oauth2/redirect?token=" + token);
+            response.sendRedirect(frontendURL+"/oauth2/redirect?token=" + token);
         }
     }
 

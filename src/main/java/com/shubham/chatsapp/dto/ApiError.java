@@ -12,7 +12,7 @@ public class ApiError {
     private String error;
     private String message;
     private String path;
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private LocalDateTime timestamp ;
 
     public ApiError(int status, String error, String message, String path) {
         this.status = status;

@@ -12,6 +12,12 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(
+        name = "verification_token",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "user_id")  // Enforce 1 token per user
+        }
+)
 public class VerificationToken {
     @Id
     @GeneratedValue
@@ -19,12 +25,12 @@ public class VerificationToken {
 
     private String token;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, unique = true)
     private User user;
 
-
     private Instant expiryDate;
+
     public VerificationToken(String token, User user, Instant expiryDate) {
         this.token = token;
         this.user = user;

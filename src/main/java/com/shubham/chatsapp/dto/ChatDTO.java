@@ -12,4 +12,5 @@ public class ChatDTO {
     private String displayName;   // Other user name or group name
     private boolean isGroup;
     private Instant lastActivity;
+    private Integer unreadCount; // new add (left handling it in backend)
 }

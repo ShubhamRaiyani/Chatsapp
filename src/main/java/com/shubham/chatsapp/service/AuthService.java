@@ -12,11 +12,14 @@ import com.shubham.chatsapp.repository.VerificationTokenRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -50,24 +53,35 @@ public class AuthService {
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
     }
+    @Value("${frontend.url}")
+    private String frontendURL;
 
 
+    @Transactional
     public boolean registerUser(RegisterRequest request) {
-        Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
+        Optional<User> existingUserOpt = userRepository.findByEmail(request.getEmail());
 
-        // Case 1: No user exists — proceed with registration
-        if (existingUser.isEmpty()) {
+        if (existingUserOpt.isEmpty()) {
             return registerNewUser(request);
         }
 
-        // Case 2: User exists but not verified — resend verification
-        if (!existingUser.get().isEnabled()) {
-            return registerNewUser(request); // Optionally, re-send verification token instead of recreating user
+        User existingUser = existingUserOpt.get();
+        if (!existingUser.isEnabled()) {
+            // Update unverified user
+            existingUser.setUsername(request.getUsername());
+            existingUser.setPassword(passwordEncoder.encode(request.getPassword()));
+            existingUser.setCreatedAt(Instant.now());
+            existingUser.setStatus("pending");
+            userRepository.save(existingUser);
+            emailTokenGenerateAndSend(existingUser);
+            return true;
         }
 
-        // Case 3: User already verified
+        // User exists and is verified
         return false;
     }
+
+
     private boolean registerNewUser(RegisterRequest request) {
         User user = User.builder()
                 .username(request.getUsername())
@@ -77,22 +91,35 @@ public class AuthService {
                 .createdAt(Instant.now())
                 .status("pending")
                 .build();
-
         userRepository.save(user);
 
-        String token = UUID.randomUUID().toString();
-        VerificationToken verificationToken =
-                new VerificationToken(token, user, Instant.now().plus(1, ChronoUnit.DAYS));
-
-        VerificationToken savedToken = tokenRepository.save(verificationToken);
-
-        log.info("Saved Token: {}", savedToken.getToken());
-
-        String verificationUrl = "http://localhost:5173/verify?token=" + token;
-        emailService.sendVerificationEmail(user.getEmail(), user.getUsername(), verificationUrl);
-
+        emailTokenGenerateAndSend(user);
         return true;
     }
+
+    @Transactional
+    public void emailTokenGenerateAndSend(User user) {
+        Optional<VerificationToken> existingTokenOpt = tokenRepository.findByUser(user);
+
+        String newTokenStr = UUID.randomUUID().toString();
+        Instant expiry = Instant.now().plus(1, ChronoUnit.DAYS);
+
+        VerificationToken token;
+        if (existingTokenOpt.isPresent()) {
+            token = existingTokenOpt.get();
+            token.setToken(newTokenStr);
+            token.setExpiryDate(expiry);
+        } else {
+            token = new VerificationToken(newTokenStr, user, expiry);
+        }
+
+        tokenRepository.save(token);
+
+        String verificationUrl = frontendURL + "/verify?token=" + newTokenStr;
+        emailService.sendVerificationEmail(user.getEmail(), user.getUsername(), verificationUrl);
+    }
+
+
 
     @Transactional
     public void verifyToken(String token) {
@@ -111,26 +138,35 @@ public class AuthService {
     }
 
     public ResponseEntity<AuthResponse> loginVerify(LoginRequest request, HttpServletResponse response) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
 
-        UserDetails user = userDetailsService.loadUserByUsername(request.getEmail());
-        String jwtToken = jwtService.generateToken(user);
+            UserDetails user = (UserDetails) authentication.getPrincipal();
+            log.info("User found: {}", user.getUsername());
 
-        // Create secure HttpOnly cookie for the JWT
-        ResponseCookie jwtCookie = ResponseCookie.from("AUTH-TOKEN", jwtToken)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("Strict")       // Or "Lax" depending on your needs
-                .path("/")
-                .maxAge(7 * 24 * 60 * 60)
-                .build();
+            String jwtToken = jwtService.generateToken(user);
 
-        // Add Set-Cookie to response header
-        response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+            ResponseCookie jwtCookie = ResponseCookie.from("AUTH-TOKEN", jwtToken)
+                    .httpOnly(true)
+                    .secure(true) // false in local dev if needed
+                    .sameSite("Strict")
+                    .path("/")
+                    .maxAge(7 * 24 * 60 * 60)
+                    .build();
 
-        // Optionally, you can omit returning the JWT in the body for extra security
-        return ResponseEntity.ok(new AuthResponse(null, request.getEmail()));
+            response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+
+            return ResponseEntity.ok(new AuthResponse(null, user.getUsername()));
+
+        } catch (BadCredentialsException e) {
+            throw e; // Let the controller handle this
+        } catch (Exception e) {
+            log.error("Login error: ", e);
+            throw e; // Let the controller catch and respond with 500
+        }
     }
+
+
 }
