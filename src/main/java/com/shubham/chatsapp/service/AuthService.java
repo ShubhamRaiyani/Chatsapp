@@ -151,7 +151,7 @@ public class AuthService {
             ResponseCookie jwtCookie = ResponseCookie.from("AUTH-TOKEN", jwtToken)
                     .httpOnly(true)
                     .secure(true) // false in local dev if needed
-                    .sameSite("Strict")
+                    .sameSite("None")
                     .path("/")
                     .maxAge(7 * 24 * 60 * 60)
                     .build();
