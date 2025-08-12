@@ -28,8 +28,8 @@ public class ChatController {
 
     @PostMapping("/group")
     public ResponseEntity<ChatDTO> createGroupChat(@RequestBody GroupCreateRequest request, Authentication authentication) {
-        String creatorEmail = authentication.getName();
-        return ResponseEntity.ok(chatService.createGroupChat(creatorEmail, request));
+        String currentUserEmail = authentication.getName();
+        return ResponseEntity.ok(chatService.createGroupChat(currentUserEmail, request));
     }
 
     @GetMapping   // dashboard chats
@@ -59,6 +59,7 @@ public class ChatController {
     public ResponseEntity<ChatDetailsDTO> getChatDetails(
             @PathVariable UUID chatId,
             @RequestParam String currentUserEmail) {
+        System.out.println("inside the controller ");
         ChatDetailsDTO details = chatService.getChatDetails(chatId, currentUserEmail);
         return ResponseEntity.ok(details);
     }

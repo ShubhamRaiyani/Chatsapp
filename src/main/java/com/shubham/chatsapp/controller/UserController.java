@@ -5,17 +5,14 @@ import com.shubham.chatsapp.dto.UserDTO;
 import com.shubham.chatsapp.dto.UserProfile;
 import com.shubham.chatsapp.entity.User;
 import com.shubham.chatsapp.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -41,7 +38,7 @@ public class UserController {
 
     @GetMapping("/search")
     public ResponseEntity<List<UserDTO>> searchUsers(@RequestParam String emailFragment) {
-        List<User> users = userRepository.findByEmailContainingIgnoreCase(emailFragment);
+        List<User> users = userRepository.findByEmailContainingIgnoreCaseAndEnabledTrue(emailFragment);
         return ResponseEntity.ok(users.stream().map(UserDTO::new).toList());
     }
 

@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -59,8 +61,6 @@ public class AuthController {
         }
     }
 
-
-
     @GetMapping({"/verify"})
     public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
         try {
@@ -75,6 +75,12 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req, HttpServletResponse response) {
         try {
             return authService.loginVerify(req, response);
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new AuthResponse("Account with this email does not exist", null));
+        } catch (DisabledException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new AuthResponse("Please verify your email before logging in", null));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new AuthResponse("Invalid credentials", null));
@@ -83,7 +89,6 @@ public class AuthController {
                     .body(new AuthResponse("Something went wrong", null));
         }
     }
-
 
     @PostMapping("/oauth2/callback")
     public ResponseEntity<?> oauth2Callback(@RequestBody Map<String, String> body, HttpServletResponse response) {
@@ -102,6 +107,12 @@ public class AuthController {
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<AuthResponse> logout(HttpServletResponse response) {
+        authService.logoutUser(response);
+        return ResponseEntity.ok(new AuthResponse("Logged out successfully", null));
     }
 
 

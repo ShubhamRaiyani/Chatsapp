@@ -2,6 +2,7 @@ package com.shubham.chatsapp.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import net.minidev.json.annotate.JsonIgnore;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -35,5 +36,7 @@ public class User {
     private Instant createdAt;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @JsonIgnore
     private VerificationToken verificationToken;
 }

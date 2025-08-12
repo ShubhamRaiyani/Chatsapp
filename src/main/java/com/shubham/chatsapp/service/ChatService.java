@@ -1,21 +1,25 @@
 package com.shubham.chatsapp.service;
 
+import com.google.gson.internal.GsonTypes;
 import com.shubham.chatsapp.dto.ChatDTO;
 import com.shubham.chatsapp.dto.ChatDetailsDTO;
 import com.shubham.chatsapp.dto.GroupCreateRequest;
 import com.shubham.chatsapp.entity.*;
+import com.shubham.chatsapp.enums.StatusType;
 import com.shubham.chatsapp.repository.*;
-import org.antlr.v4.runtime.misc.LogManager;
-import org.springframework.http.HttpStatus;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 @Service
+@Slf4j
 public class ChatService {
 
     private final UserRepository userRepository;
@@ -92,8 +96,8 @@ public class ChatService {
         groupMemberRepository.save(creatorMember);
 
         // Add other members
-        if (request.getMemberIds() != null) {
-            for (String email : request.getMemberIds()) {
+        if (request.getMemberEmails() != null) {
+            for (String email : request.getMemberEmails()) {
                 User memberUser = userRepository.findByEmail(email)
                         .orElseThrow(() -> new RuntimeException("User with email " + email + " not found"));
                 GroupMember member = new GroupMember();
@@ -114,7 +118,7 @@ public class ChatService {
         welcome.setCreatedAt(Instant.now());
         messageRepository.save(welcome);
 
-        return mapGroupToChatDTO(savedGroup);
+        return mapGroupToChatDTO(savedGroup,creatorEmail);
     }
 
     public List<ChatDTO> getAllChats(String currentUserEmail) {
@@ -129,7 +133,7 @@ public class ChatService {
                 .toList());
 
         List<ChatDTO> groupChatDTOs = groups.stream()
-                .map(this::mapGroupToChatDTO)
+                .map(group -> mapGroupToChatDTO(group ,currentUserEmail))
                 .toList();
 
         chatDTOs.addAll(groupChatDTOs);
@@ -141,6 +145,7 @@ public class ChatService {
         dto.setId(chat.getId());
         dto.setGroup(false);
 
+
         // Find other participant's name
         String otherUserName = chat.getMessages().stream()
                 .flatMap(m -> Stream.of(m.getSender(), m.getReceiver()))
@@ -151,6 +156,15 @@ public class ChatService {
 
         dto.setDisplayName(otherUserName);
 
+        //reciever email
+        String receiverEmail = null;
+        if (chat.getUser1() != null && !chat.getUser1().getEmail().equals(currentUserEmail)) {
+            receiverEmail = chat.getUser1().getEmail();
+        } else if (chat.getUser2() != null && !chat.getUser2().getEmail().equals(currentUserEmail)) {
+            receiverEmail = chat.getUser2().getEmail();
+        }
+        System.out.println(receiverEmail + "reciever email in mapcaht tot dto");
+        dto.setReceiverEmail(receiverEmail);
         // Last activity is chat's timestamp or last message createdAt
         Instant lastActivity = chat.getMessages().stream()
                 .map(Message::getCreatedAt)
@@ -158,39 +172,122 @@ public class ChatService {
                 .orElse(chat.getTimestamp());
         dto.setLastActivity(lastActivity);
 
+        String lastMessage = chat.getMessages().stream()
+                .max(Comparator.comparing(Message::getCreatedAt)) // Get the latest message by createdAt
+                .map(Message::getContent)                         // Extract its content
+                .orElse("");                                      // Fallback if no messages
+
+        dto.setLastMessage(lastMessage);
+
+        long unreadcount = countUnreadMessages(chat.getMessages(), receiverEmail, currentUserEmail);
+        dto.setUnreadCount(unreadcount);
+
         return dto;
     }
 
-    private ChatDTO mapGroupToChatDTO(Group group) {
+    private ChatDTO mapGroupToChatDTO(Group group,String currentUserEmail) {
         ChatDTO dto = new ChatDTO();
         dto.setId(group.getId());
         dto.setDisplayName(group.getName());
         dto.setGroup(true);
-        dto.setLastActivity(group.getCreatedAt());
+        Instant lastActivity = group.getMessages().stream()
+                .map(Message::getCreatedAt)
+                .max(Comparator.naturalOrder())
+                .orElse(group.getCreatedAt());
+        dto.setLastActivity(lastActivity);
+        String lastMessage = group.getMessages().stream()
+                .max(Comparator.comparing(Message::getCreatedAt)) // Get the latest message by createdAt
+                .map(Message::getContent)                         // Extract its content
+                .orElse("");                                      // Fallback if no messages
+        dto.setLastMessage(lastMessage);
+
+        List<String> memberEmails = groupMemberRepository.findByGroup(group).stream()
+                .map(gm -> gm.getUser().getEmail())
+                .toList();
+        dto.setParticipantEmails(memberEmails);
+        long unreadcount = countUnreadMessagesInGroup(group.getMessages() , currentUserEmail);
+        dto.setUnreadCount(unreadcount);
+
         return dto;
     }
+    // For personal chats
+    public long countUnreadMessages(List<Message> messages, String senderEmail, String currentUserEmail) {
+        if (senderEmail == null || currentUserEmail == null) {
+            return 0; // no valid sender/current user
+        }
+        return messages.stream()
+                // Only messages from the given sender
+                .filter(msg -> msg.getSender() != null
+                        && senderEmail.equals(msg.getSender().getEmail()))
+                // Check the status for the current user
+                .filter(msg -> msg.getStatuses() != null && msg.getStatuses().stream()
+                        .anyMatch(status -> status.getUser() != null
+                                && currentUserEmail.equals(status.getUser().getEmail())
+                                && status.getStatus() != StatusType.READ))
+                .count();
+    }
+
+    // For group chats
+    public long countUnreadMessagesInGroup(List<Message> messages, String currentUserEmail) {
+        if (currentUserEmail == null) {
+            return 0; // no valid current user
+        }
+        return messages.stream()
+                // Message must be sent by someone else
+                .filter(msg -> msg.getSender() != null
+                        && !currentUserEmail.equals(msg.getSender().getEmail()))
+                // Check the status for the current user
+                .filter(msg -> msg.getStatuses() != null && msg.getStatuses().stream()
+                        .anyMatch(status -> status.getUser() != null
+                                && currentUserEmail.equals(status.getUser().getEmail())
+                                && status.getStatus() != StatusType.READ))
+                .count();
+    }
+
+
+
+
+
+
 
     public ChatDetailsDTO getChatDetails(UUID chatId, String currentUserEmail) {
+
+        log.info("🔍 Fetching chat details for chatId={} and currentUserEmail={}", chatId, currentUserEmail);
+
         // Try to find chat first
         Optional<Chat> chatOpt = chatRepository.findById(chatId);
         if (chatOpt.isPresent()) {
             Chat chat = chatOpt.get();
+            log.debug("✅ Chat found: {}", chat);
 
             // Find other participant in personal chat
-            String otherUserName = chat.getMessages().stream()
-                    .flatMap(m -> Stream.of(m.getSender(), m.getReceiver()))
-                    .filter(u -> u != null && !u.getEmail().equals(currentUserEmail))
-                    .map(User::getEmail)
-                    .findFirst()
-                    .orElse("Unknown");
+//            String otherUserName = chat.getMessages().stream()
+//                    .flatMap(m -> Stream.of(m.getSender(), m.getReceiver()))
+//                    .filter(u -> u != null && !u.getEmail().equals(currentUserEmail))
+//                    .map(User::getEmail)
+//                    .findFirst()
+//                    .orElse("Unknown");
+//            log.debug("👤 Other participant (name/email) from messages: {}", otherUserName);
+
+            String receiverEmail = null;
+            if (chat.getUser1() != null && !chat.getUser1().getEmail().equals(currentUserEmail)) {
+                receiverEmail = chat.getUser1().getEmail();
+            } else if (chat.getUser2() != null && !chat.getUser2().getEmail().equals(currentUserEmail)) {
+                receiverEmail = chat.getUser2().getEmail();
+            }
+            log.debug("📩 Receiver email from Chat entity: {}", receiverEmail);
+
+            String username = userRepository.findByEmail(receiverEmail).orElseThrow(() -> {
+                throw new UsernameNotFoundException("user not found from the email");
+            }).getUsername();
 
             ChatDetailsDTO dto = new ChatDetailsDTO();
             dto.setChatId(chat.getId());
-            dto.setDisplayName(otherUserName);
+            dto.setDisplayName(username);
             dto.setGroup(false);
+            dto.setReceiverEmail(receiverEmail);
             dto.setLastActivity(chat.getTimestamp());
-
-            // You can also add participant emails if you want (for personal chat just the 2 users)
+            // Participants
             List<String> participants = chat.getMessages().stream()
                     .flatMap(m -> Stream.of(m.getSender(), m.getReceiver()))
                     .filter(Objects::nonNull)
@@ -199,6 +296,7 @@ public class ChatService {
                     .toList();
             dto.setParticipantEmails(participants);
 
+            log.info("📋 Returning chat details DTO: {}", dto);
             return dto;
         }
 
@@ -206,6 +304,7 @@ public class ChatService {
         Optional<Group> groupOpt = groupRepository.findById(chatId);
         if (groupOpt.isPresent()) {
             Group group = groupOpt.get();
+            log.debug("👥 Group found: {}", group.getName());
 
             ChatDetailsDTO dto = new ChatDetailsDTO();
             dto.setChatId(group.getId());
@@ -213,17 +312,19 @@ public class ChatService {
             dto.setGroup(true);
             dto.setLastActivity(group.getCreatedAt());
 
-            // Add emails of group members
             List<String> memberEmails = groupMemberRepository.findByGroup(group).stream()
                     .map(gm -> gm.getUser().getEmail())
                     .toList();
             dto.setParticipantEmails(memberEmails);
 
+            log.info("📋 Returning group chat details DTO: {}", dto);
             return dto;
         }
 
+        log.error("❌ Chat or Group not found for chatId={}", chatId);
         throw new NoSuchElementException("Chat or Group not found");
     }
+
 
 
 }

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -27,6 +28,7 @@ public class VerificationToken {
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, unique = true)
+    @ToString.Exclude
     private User user;
 
     private Instant expiryDate;

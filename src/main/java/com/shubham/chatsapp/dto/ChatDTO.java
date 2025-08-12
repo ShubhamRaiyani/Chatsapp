@@ -1,5 +1,6 @@
 package com.shubham.chatsapp.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.time.Instant;
@@ -9,8 +10,14 @@ import java.util.UUID;
 @Data
 public class ChatDTO {
     private UUID id;              // Chat or Group ID
-    private String displayName;   // Other user name or group name
+    private String displayName;
+    @JsonProperty("isGroup")
     private boolean isGroup;
     private Instant lastActivity;
-    private Integer unreadCount; // new add (left handling it in backend)
+    private String lastMessage;
+    private Long unreadCount; // new add (left handling it in backend)
+    private String receiverEmail;
+    private List<String> participantEmails;  // Optional, emails of chat/group members
+
+
 }

@@ -7,5 +7,5 @@ import java.util.List;
 @Data
 public class GroupCreateRequest {
     private String name;
-    private List<String> memberIds;
+    private List<String> memberEmails;
 }

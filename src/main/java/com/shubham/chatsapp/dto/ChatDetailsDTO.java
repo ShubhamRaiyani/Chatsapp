@@ -11,5 +11,6 @@ public class ChatDetailsDTO {
     private String displayName;  // Other user name for personal chat, or group name
     private boolean isGroup;
     private Instant lastActivity;
+    private String receiverEmail;
     private List<String> participantEmails;  // Optional, emails of chat/group members
 }

@@ -59,15 +59,22 @@ public class MessageStatusService {
     }
 
 
-    public void markAllMessagesAsRead(UUID chatId, UUID userId) {
-        User user = userRepository.findById(userId).orElseThrow(()-> new IllegalArgumentException("user Not found "));
-        List<Message> messages = messageRepository.findUnreadMessages(chatId, userId);
-//        List<Message> messages = messageRepository.findUnreadMessagesByChatId(chatId, user);
+    public void markAllMessagesAsRead(UUID targetId, UUID userId, boolean isGroup ) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        List<Message> messages;
+        if (isGroup) {
+            messages = messageRepository.findUnreadGroupMessages(targetId, userId);
+        } else {
+            messages = messageRepository.findUnreadMessages(targetId, userId);
+        }
 
         for (Message message : messages) {
             markRead(message, user);
         }
     }
+
 
     @Transactional
     public List<MessageStatus> markMessagesDelivered(String receiverEmail) {

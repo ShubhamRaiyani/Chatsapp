@@ -16,10 +16,10 @@ import java.util.UUID;
 public interface MessageRepository extends JpaRepository<Message, UUID> {
 
     // For personal chat
-    Page<Message> findByChat_IdOrderByCreatedAtDesc(UUID chatId, Pageable pageable);
+    Page<Message> findByChat_IdOrderByCreatedAtAsc(UUID chatId, Pageable pageable);
 
     // For group chat
-    Page<Message> findByGroup_IdOrderByCreatedAtDesc(UUID groupId, Pageable pageable);
+    Page<Message> findByGroup_IdOrderByCreatedAtAsc(UUID groupId, Pageable pageable);
 
     Optional<Message> findById(UUID messageId);
 
@@ -35,5 +35,25 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
             "WHERE m.chat.id = :chatId AND m.sender.id <> :userId " +
             "AND (s IS NULL OR s.status <> 'READ')")
     List<Message> findUnreadMessages(@Param("chatId") UUID chatId, @Param("userId") UUID userId);
+
+    @Query("""
+        SELECT m FROM Message m
+        LEFT JOIN m.statuses s ON s.user.id = :userId
+        WHERE m.group.id = :groupId 
+        AND m.sender.id <> :userId
+        AND (s IS NULL OR s.status <> 'READ')
+        """)
+    List<Message> findUnreadGroupMessages(@Param("groupId") UUID groupId, @Param("userId") UUID userId);
+
+
+    @Query("""
+        SELECT m FROM Message m
+        LEFT JOIN m.group g
+        LEFT JOIN GroupMember gm ON gm.group = g
+        WHERE (m.receiver.email = :email) 
+           OR (gm.user.email = :email)
+        """)
+    List<Message> findMessagesForUser(@Param("email") String email);
+
 
 }

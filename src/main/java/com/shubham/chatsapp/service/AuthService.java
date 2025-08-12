@@ -35,6 +35,8 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class AuthService {
+    @Value("${cookies.secure}")
+    private Boolean cookies_secure;
 
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
@@ -81,7 +83,6 @@ public class AuthService {
         return false;
     }
 
-
     private boolean registerNewUser(RegisterRequest request) {
         User user = User.builder()
                 .username(request.getUsername())
@@ -119,8 +120,6 @@ public class AuthService {
         emailService.sendVerificationEmail(user.getEmail(), user.getUsername(), verificationUrl);
     }
 
-
-
     @Transactional
     public void verifyToken(String token) {
         VerificationToken verificationToken = tokenRepository.findByToken(token)
@@ -132,25 +131,45 @@ public class AuthService {
 
         User user = verificationToken.getUser();
         user.setEnabled(true);
-        userRepository.save(user);
+        User save = userRepository.save(user);
+        System.out.println(save.isEnabled());
 
 //        tokenRepository.delete(verificationToken);
     }
 
     public ResponseEntity<AuthResponse> loginVerify(LoginRequest request, HttpServletResponse response) {
         try {
+            // Step 1: Check if user exists by email
+            Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
+
+            if (userOpt.isEmpty()) {
+                return ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body(new AuthResponse("Account with this email does not exist", null));
+            }
+
+            User user = userOpt.get();
+
+            // Step 2: Check if email is verified
+            if (!user.isEnabled()) {
+                return ResponseEntity
+                        .status(HttpStatus.FORBIDDEN)
+                        .body(new AuthResponse("Please verify your email before logging in", null));
+            }
+
+            // Step 3: Authenticate email and password
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
 
-            UserDetails user = (UserDetails) authentication.getPrincipal();
-            log.info("User found: {}", user.getUsername());
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
-            String jwtToken = jwtService.generateToken(user);
+            // Step 4: Generate JWT token and set as HttpOnly cookie
+            String jwtToken = jwtService.generateToken(userDetails);
 
             ResponseCookie jwtCookie = ResponseCookie.from("AUTH-TOKEN", jwtToken)
                     .httpOnly(true)
-                    .secure(true) // false in local dev if needed
+                    .secure(cookies_secure) // false for local dev
                     .sameSite("None")
                     .path("/")
                     .maxAge(7 * 24 * 60 * 60)
@@ -158,14 +177,29 @@ public class AuthService {
 
             response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
 
-            return ResponseEntity.ok(new AuthResponse(null, user.getUsername()));
+            return ResponseEntity.ok(new AuthResponse(null, user.getEmail()));
 
         } catch (BadCredentialsException e) {
-            throw e; // Let the controller handle this
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthResponse("Invalid password", null));
         } catch (Exception e) {
             log.error("Login error: ", e);
-            throw e; // Let the controller catch and respond with 500
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new AuthResponse("Login failed due to server error", null));
         }
+    }
+
+    public void logoutUser(HttpServletResponse response) {
+        // Create an expired cookie to remove it on client side
+        ResponseCookie expiredCookie = ResponseCookie.from("AUTH-TOKEN", "")
+                .httpOnly(true)
+                .secure(true) // use false for dev if not HTTPS
+                .sameSite("None")
+                .path("/")
+                .maxAge(0) // expire immediately
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, expiredCookie.toString());
     }
 
 

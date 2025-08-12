@@ -53,7 +53,7 @@ public class WebSocketEventListener {
             log.info("Chatid check {} and user id {} ", chatId,userId);
         User byEmail = userRepository.findByEmail(userId).orElseThrow(()-> new IllegalArgumentException("Email from the websocket is not valid"));
         tracker.addSubscription(sessionId, byEmail.getId(), UUID.fromString(chatId));
-        messageStatusService.markAllMessagesAsRead(UUID.fromString(chatId), byEmail.getId()); //  userid = email
+        messageStatusService.markAllMessagesAsRead(UUID.fromString(chatId), byEmail.getId(), false); //  userid = email
     }
 }
 

@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.UUID;
 
 @Service
@@ -84,14 +83,14 @@ public class MessageService {
     public Page<MessageDTO> getMessagesForChat(UUID chatId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         System.out.println(pageable);
-        Page<Message> messagePage = messageRepository.findByChat_IdOrderByCreatedAtDesc(chatId, pageable);
+        Page<Message> messagePage = messageRepository.findByChat_IdOrderByCreatedAtAsc(chatId, pageable);
         System.out.println(messagePage);
         return messagePage.map(this::mapToDTO);
     }
 
     public Page<MessageDTO> getMessagesForGroup(UUID groupId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Message> messagePage = messageRepository.findByGroup_IdOrderByCreatedAtDesc(groupId, pageable);
+        Page<Message> messagePage = messageRepository.findByGroup_IdOrderByCreatedAtAsc(groupId, pageable);
         return messagePage.map(this::mapToDTO);
     }
 //    public List<MessageDTO> getMessagesForChat(UUID chatId, int page, int size) {
