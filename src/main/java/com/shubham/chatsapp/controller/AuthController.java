@@ -8,6 +8,7 @@ import com.shubham.chatsapp.service.AuthService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Generated;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -30,7 +31,8 @@ import java.util.Map;
 @RequestMapping({"/api/auth"})
 public class AuthController {
     private final AuthService authService;
-
+    @Value("${cookies.secure}")
+    private Boolean cookies_secure;
     @Generated
     public AuthController(final AuthService authService) {
         this.authService = authService;
@@ -99,7 +101,7 @@ public class AuthController {
         // Set cookie with HttpOnly flag and secure flags as appropriate
         ResponseCookie cookie = ResponseCookie.from("AUTH-TOKEN", token)
                 .httpOnly(true)
-                .secure(true)
+                .secure(cookies_secure)
                 .path("/")
                 .sameSite("None")
                 .maxAge(60 * 60 * 24 * 7)
