@@ -9,88 +9,115 @@ import com.shubham.chatsapp.service.MessageService;
 import com.shubham.chatsapp.service.MessageStatusService;
 import com.shubham.chatsapp.service.WebSocketSessionTracker;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.socket.messaging.SessionConnectedEvent;
-import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 
-import java.security.Principal;
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 @Controller
+@RequiredArgsConstructor
 public class WebSocketController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final MessageService messageService;
-    private final StringRedisTemplate redisTemplate;
     private final UserRepository userRepository;
     private final WebSocketSessionTracker sessionTracker;
     private final MessageStatusService messageStatusService;
-    public WebSocketController(SimpMessagingTemplate messagingTemplate, MessageService messageService, StringRedisTemplate redisTemplate, UserRepository userRepository, WebSocketSessionTracker sessionTracker, MessageStatusService messageStatusService) {
-        this.messagingTemplate = messagingTemplate;
-        this.messageService = messageService;
-        this.redisTemplate = redisTemplate;
-        this.userRepository = userRepository;
-        this.sessionTracker = sessionTracker;
-        this.messageStatusService = messageStatusService;
-    }
 
-
-    @MessageMapping("/chat.send") // From client to /app/chat.send
-    public void handleSendMessage(@Payload MessageDTO messageDTO,Authentication authentication) {
+    @MessageMapping("/chat.send") // Single entry point for both direct and group messages
+    public void handleSendMessage(@Payload MessageDTO messageDTO, Authentication authentication) {
         String authenticatedEmail = authentication.getName();
-//
-//        // Optionally, compare and enforce
-//        if (!authenticatedEmail.equals(messageDTO.getSenderEmail())) {
-//            throw new SecurityException("Sender spoofing attempt detected!");
-//        }
 
-        // Save to DB
-        System.out.println(">>>>> handleSendMessage called");
-        MessageDTO savedMessageDTO = messageService.sendMessage(messageDTO,authenticatedEmail);
+        System.out.println(">>> handleSendMessage called for: " +
+                (messageDTO.getChatId() != null ? "Direct Chat" : "Group Chat"));
+
+        // Save message to database
+        MessageDTO savedMessageDTO = messageService.sendMessage(messageDTO, authenticatedEmail);
         Message savedMessage = messageService.getMessageFromMessageDTO(savedMessageDTO);
 
-        User receiverUser = userRepository.findByEmail(messageDTO.getReceiverEmail()).orElseThrow(() -> new UsernameNotFoundException("User not found"));;
-        String receiverUserId = receiverUser.getId().toString();
-        UUID uuidRecieverUserId = UUID.fromString(receiverUserId);
-
-
-        // Broadcast to all clients subscribed to the chat
+        // Route based on message type
         if (messageDTO.getChatId() != null) {
-            messagingTemplate.convertAndSend("/topic/chat/" + messageDTO.getChatId(), savedMessageDTO);
-
-             // ✅ Check if recipient is subscribed to this chat
-        if (sessionTracker.isUserConnected(uuidRecieverUserId)) {
-            if (sessionTracker.isUserSubscribedToChat(uuidRecieverUserId, savedMessage.getChat().getId())) {
-                messageStatusService.markRead(savedMessage, receiverUser);
-            } else {
-                messageStatusService.markDelivered(savedMessage,receiverUser);
-            }
-        }
-        boolean a = sessionTracker.isUserConnected(uuidRecieverUserId);
-            System.out.println("result o conection checkof reciever " + a);
-            boolean b = sessionTracker.isUserSubscribedToChat(uuidRecieverUserId,savedMessage.getChat().getId());
-            System.out.println("result o subcriber checkof reciever " + b);
-//            if (sessionTracker.isUserSubscribedToChat(String.valueOf(receiverUser.getId()), messageDTO.getChatId().toString())) {
-//                messageStatusService.markDelivered(savedMessage, receiverUser);
-//            }
+            handleDirectMessage(savedMessageDTO, savedMessage);
         } else if (messageDTO.getGroupId() != null) {
-            messagingTemplate.convertAndSend("/topic/group/" + messageDTO.getGroupId(), savedMessageDTO);
+            handleGroupMessage(savedMessageDTO, savedMessage);
         } else {
-            System.out.println("Responseentity<ChatNotAvailable>");
+            throw new IllegalArgumentException("Either chatId or groupId must be provided");
         }
     }
 
+    private void handleDirectMessage(MessageDTO savedMessageDTO, Message savedMessage) {
+        // Broadcast to chat topic
+        messagingTemplate.convertAndSend("/topic/chat/" + savedMessageDTO.getChatId(), savedMessageDTO);
 
+        // Handle receiver status
+        User receiverUser = savedMessage.getReceiver();
+        UUID receiverUserId = receiverUser.getId();
 
+        if (sessionTracker.isUserConnected(receiverUserId)) {
+            if (sessionTracker.isUserSubscribedToChat(receiverUserId, savedMessage.getChat().getId())) {
+                messageStatusService.markRead(savedMessage, receiverUser);
+                System.out.println("Message marked as READ for receiver: " + receiverUser.getEmail());
+            } else {
+                messageStatusService.markDelivered(savedMessage, receiverUser);
+                System.out.println("Message marked as DELIVERED for receiver: " + receiverUser.getEmail());
+            }
+        } else {
+            System.out.println("Receiver is offline, status remains SENT");
+        }
+    }
 
+    private void handleGroupMessage(MessageDTO savedMessageDTO, Message savedMessage) {
+        // Broadcast to group topic
+        messagingTemplate.convertAndSend("/topic/group/" + savedMessageDTO.getGroupId(), savedMessageDTO);
+
+        // Get all group members except sender
+        List<User> groupMembers = messageService.getGroupMembers(savedMessage.getGroup().getId());
+        User sender = savedMessage.getSender();
+
+        System.out.println("Processing group message for " + groupMembers.size() + " members");
+
+        // Handle status for each group member
+        for (User member : groupMembers) {
+            if (!member.getId().equals(sender.getId())) { // Skip sender
+                UUID memberId = member.getId();
+
+                if (sessionTracker.isUserConnected(memberId)) {
+                    if (sessionTracker.isUserSubscribedToGroup(memberId, savedMessage.getGroup().getId())) {
+                        messageStatusService.markRead(savedMessage, member);
+                        System.out.println("Group message marked as READ for: " + member.getEmail());
+                    } else {
+                        messageStatusService.markDelivered(savedMessage, member);
+                        System.out.println("Group message marked as delivered for: " + member.getEmail());
+                    }
+                } else {
+                    System.out.println("Group member offline: " + member.getEmail());
+                }
+            }
+        }
+    }
+
+//    @MessageMapping("/chat.read") // For both direct and group read receipts
+//    public void handleReadMessages(@Payload ReadReceiptDTO payload, Authentication authentication) {
+//        String userEmail = authentication.getName();
+//        User user = userRepository.findByEmail(userEmail)
+//                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+//
+//        if (payload.getChatId() != null) {
+//            // Direct chat read receipt
+//            messageStatusService.markAllMessagesAsRead(payload.getChatId(), user.getId(), false);
+//            System.out.println("Marked all direct messages as read for chat: " + payload.getChatId());
+//        } else if (payload.getGroupId() != null) {
+//            // Group chat read receipt
+//            messageStatusService.markAllMessagesAsRead(payload.getGroupId(), user.getId(), true);
+//            System.out.println("Marked all group messages as read for group: " + payload.getGroupId());
+//        }
+//    }
+}
 
 //
 //
@@ -101,4 +128,3 @@ public class WebSocketController {
 //    }
 
 
-}

@@ -35,8 +35,10 @@ import java.util.UUID;
 @Service
 @Slf4j
 public class AuthService {
-    @Value("${cookies.secure}")
+    @Value("${cookies.secure:false}")
     private Boolean cookies_secure;
+    @Value("${cookies.samesite}")
+    private String cookies_samesite;
 
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
@@ -170,10 +172,11 @@ public class AuthService {
             ResponseCookie jwtCookie = ResponseCookie.from("AUTH-TOKEN", jwtToken)
                     .httpOnly(true)
                     .secure(cookies_secure) // false for local dev
-                    .sameSite("None")
+                    .sameSite(cookies_samesite)
                     .path("/")
                     .maxAge(7 * 24 * 60 * 60)
                     .build();
+            System.out.println("Cookies auth servce= "+ jwtCookie.toString());
 
             response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
 
@@ -193,8 +196,8 @@ public class AuthService {
         // Create an expired cookie to remove it on client side
         ResponseCookie expiredCookie = ResponseCookie.from("AUTH-TOKEN", "")
                 .httpOnly(true)
-                .secure(true) // use false for dev if not HTTPS
-                .sameSite("None")
+                .secure(cookies_secure) // use false for dev if not HTTPS
+                .sameSite(cookies_samesite)
                 .path("/")
                 .maxAge(0) // expire immediately
                 .build();

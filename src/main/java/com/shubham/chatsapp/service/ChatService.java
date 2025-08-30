@@ -261,13 +261,13 @@ public class ChatService {
             log.debug("✅ Chat found: {}", chat);
 
             // Find other participant in personal chat
-//            String otherUserName = chat.getMessages().stream()
-//                    .flatMap(m -> Stream.of(m.getSender(), m.getReceiver()))
-//                    .filter(u -> u != null && !u.getEmail().equals(currentUserEmail))
-//                    .map(User::getEmail)
-//                    .findFirst()
-//                    .orElse("Unknown");
-//            log.debug("👤 Other participant (name/email) from messages: {}", otherUserName);
+            //            String otherUserName = chat.getMessages().stream()
+            //                    .flatMap(m -> Stream.of(m.getSender(), m.getReceiver()))
+            //                    .filter(u -> u != null && !u.getEmail().equals(currentUserEmail))
+            //                    .map(User::getEmail)
+            //                    .findFirst()
+            //                    .orElse("Unknown");
+            //            log.debug("👤 Other participant (name/email) from messages: {}", otherUserName);
 
             String receiverEmail = null;
             if (chat.getUser1() != null && !chat.getUser1().getEmail().equals(currentUserEmail)) {
@@ -324,6 +324,8 @@ public class ChatService {
         log.error("❌ Chat or Group not found for chatId={}", chatId);
         throw new NoSuchElementException("Chat or Group not found");
     }
+
+    
 
 
 

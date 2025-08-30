@@ -118,6 +118,18 @@ public class WebSocketSessionTracker {
 
         return result;
     }
+    public boolean isUserSubscribedToGroup(UUID userId, UUID groupId) {
+        // Check if user has subscribed to /topic/group/{groupId}
+        Boolean result = Boolean.TRUE.equals(
+                redisTemplate.opsForSet().isMember("user:" + userId.toString() + ":groups", groupId.toString())
+        );
+        System.out.println("is subscribed to group: " + result);
+        return result;
+    }
+
+// You'll also need to modify the WebSocketEventListener to handle group subscriptions
+
+
 //     🔄 Add new WebSocket sessiond
 //    public void registerSession(String sessionId, String userId) { // userid = email from sha
 //        sessionUserMap.put(sessionId, userId);

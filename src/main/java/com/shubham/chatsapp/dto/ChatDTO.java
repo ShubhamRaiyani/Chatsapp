@@ -17,7 +17,7 @@ public class ChatDTO {
     private String lastMessage;
     private Long unreadCount; // new add (left handling it in backend)
     private String receiverEmail;
-    private List<String> participantEmails;  // Optional, emails of chat/group members
+    private List<String> participantEmails;  // , emails of chat/group members
 
 
 }

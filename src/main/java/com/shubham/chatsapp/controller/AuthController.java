@@ -30,9 +30,15 @@ import java.util.Map;
 @RestController
 @RequestMapping({"/api/auth"})
 public class AuthController {
+
     private final AuthService authService;
+
     @Value("${cookies.secure}")
     private Boolean cookies_secure;
+    @Value("${cookies.samesite}")
+    private String cookies_samesite;
+
+
     @Generated
     public AuthController(final AuthService authService) {
         this.authService = authService;
@@ -103,9 +109,10 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(cookies_secure)
                 .path("/")
-                .sameSite("None")
+                .sameSite(cookies_samesite)
                 .maxAge(60 * 60 * 24 * 7)
                 .build();
+        System.out.println("Cookies auth controller= "+ cookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         return ResponseEntity.ok().build();
