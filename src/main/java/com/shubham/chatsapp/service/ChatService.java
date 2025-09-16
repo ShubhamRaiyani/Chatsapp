@@ -326,7 +326,35 @@ public class ChatService {
         throw new NoSuchElementException("Chat or Group not found");
     }
 
-    
+    @Transactional
+    public void leaveGroup(UUID groupId, String userEmail) {
+        // Find the user
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Find the group
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        // Find the group member relationship
+        GroupMember groupMember = groupMemberRepository.findByGroupAndUser(group, user)
+                .orElseThrow(() -> new RuntimeException("You are not a member of this group"));
+
+        // Remove the user from the group
+        groupMemberRepository.delete(groupMember);
+
+        // Create a leave notification message (optional)
+        Message leaveMessage = new Message();
+        leaveMessage.setGroup(group);
+        leaveMessage.setSender(user);
+        leaveMessage.setContent(user.getEmail() + " has left the group");
+        leaveMessage.setCreatedAt(LocalDateTime.now());
+        messageRepository.save(leaveMessage);
+
+        log.info("User {} successfully left group {}", userEmail, group.getName());
+    }
+
+
 
 
 

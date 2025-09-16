@@ -38,9 +38,11 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
             "((m.chat IS NOT NULL AND m.chat.id = :chatId) OR " +
             "(m.group IS NOT NULL AND m.group.id = :chatId)) " +
             "AND m.createdAt >= :cutoff " +
+            "AND m.messageType <> 'SUMMARY' " +
             "ORDER BY m.createdAt ASC")
     List<Message> findRecentMessages(@Param("chatId") UUID chatId,
                                      @Param("cutoff") LocalDateTime cutoff);
+
 
 
 

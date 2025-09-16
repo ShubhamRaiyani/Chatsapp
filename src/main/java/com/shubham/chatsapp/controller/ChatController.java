@@ -37,23 +37,7 @@ public class ChatController {
         String currentUserEmail = authentication.getName();
         return ResponseEntity.ok(chatService.getAllChats(currentUserEmail));
     }
-//    @GetMapping("/{chatId}")
-//    public ResponseEntity<ChatDetailsDTO> getChatDetails(
-//            @PathVariable UUID chatId,
-//            @RequestParam String currentUserEmail
-//    ) {
-//        ChatDetailsDTO dto = chatService.getPersonalChatDetails(chatId, currentUserEmail);
-//        return ResponseEntity.ok(dto);
-//    }
-//
-//    // For group chat
-//    @GetMapping("/group/{groupId}")
-//    public ResponseEntity<GroupChatDetailsDTO> getGroupChatDetails(
-//            @PathVariable UUID groupId
-//    ) {
-//        GroupChatDetailsDTO dto = chatService.getGroupChatDetails(groupId);
-//        return ResponseEntity.ok(dto);
-//    }
+
 
     @GetMapping("/chat/{chatId}/details")
     public ResponseEntity<ChatDetailsDTO> getChatDetails(
@@ -63,5 +47,20 @@ public class ChatController {
         ChatDetailsDTO details = chatService.getChatDetails(chatId, currentUserEmail);
         return ResponseEntity.ok(details);
     }
+
+    @DeleteMapping("/group/{groupId}/leave")
+    public ResponseEntity<?> leaveGroup(
+            @PathVariable UUID groupId,
+            Authentication authentication) {
+        String currentUserEmail = authentication.getName();
+        try {
+            chatService.leaveGroup(groupId, currentUserEmail);
+            return ResponseEntity.ok().body("Successfully left the group");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+
 
 }
