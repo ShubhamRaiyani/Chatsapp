@@ -13,15 +13,16 @@ import com.shubham.chatsapp.repository.ChatRepository;
 import com.shubham.chatsapp.repository.GroupRepository;
 import com.shubham.chatsapp.repository.MessageRepository;
 import com.shubham.chatsapp.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;  // ✅ Lombok logger
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ChatSummaryService {
 
@@ -45,75 +46,64 @@ public class ChatSummaryService {
         this.groupRepository = groupRepository;
     }
 
-    /**
-     * Fetches messages from the last 2 days for the given chat or group,
-     * sends them to Cohere’s Summarize endpoint, and saves the summary.
-     *
-     * @param chatId    UUID of the chat or group
-     * @param userEmail Email of the requesting user
-     * @return the generated summary text, or null if no messages to summarize
-     */
     public String generateChatSummaryText(UUID chatId, String userEmail) {
-        LocalDateTime twoDaysAgo = LocalDateTime.now().minusDays(2);
-        List<Message> messages = messageRepository.findRecentMessages(chatId, twoDaysAgo);
-        if (messages.isEmpty()) {
-            return null;
+        try {
+            LocalDateTime twoDaysAgo = LocalDateTime.now().minusDays(2);
+            List<Message> messages = messageRepository.findRecentMessages(chatId, twoDaysAgo);
+            if (messages.isEmpty()) {
+                log.info("No recent messages found for chatId={} within 2 days", chatId);
+                return null;
+            }
+
+            StringBuilder sb = new StringBuilder("Summarize the following chat give only summary no other details:\n");
+            for (Message msg : messages) {
+                sb.append(msg.getSender().getUsername())
+                        .append(": ")
+                        .append(msg.getContent())
+                        .append("\n");
+            }
+            String prompt = sb.toString();
+
+            Cohere cohere = Cohere.builder().token(apiKey).build();
+            ChatResponse response = cohere.v2().chat(
+                    V2ChatRequest.builder()
+                            .model("command-a-03-2025")
+                            .messages(List.of(
+                                    ChatMessageV2.user(
+                                            UserMessage.builder()
+                                                    .content(UserMessageContent.of(prompt))
+                                                    .build()
+                                    )
+                            ))
+                            .build()
+            );
+
+            if (response != null
+                    && response.getMessage() != null
+                    && response.getMessage().getContent() != null
+                    && !response.getMessage().getContent().isEmpty()) {
+
+                String summaryText = response.getMessage()
+                        .getContent().get().get(0)
+                        .getText().get().getText();
+
+                saveSummaryAsMessage(chatId, userEmail, summaryText);
+                return summaryText;
+            } else {
+                log.warn("Empty response from Cohere for chatId={}", chatId);
+                return null;
+            }
+        } catch (CohereApiException e) {
+            log.error("Cohere API error while summarizing chatId={}: {}", chatId, e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Unexpected error while generating chat summary for chatId={}", chatId, e);
         }
-
-        StringBuilder sb = new StringBuilder("Summarize the following chat give only summary no other details :\n");
-        for (Message msg : messages) {
-            sb.append(msg.getSender().getUsername())
-                    .append(": ")
-                    .append(msg.getContent())
-                    .append("\n");
-        }
-        String prompt = sb.toString();
-
-        Cohere cohere = Cohere.builder().token(apiKey).build();
-        ChatResponse response = cohere.v2().chat(
-                V2ChatRequest.builder()
-                        .model("command-a-03-2025")
-                        .messages(List.of(
-//                                ChatMessageV2.system(
-//                                        SystemMessage.builder()
-//                                                .content(SystemMessageContent.of("You are a helpful assistant that summarizes chats. one paragraph"))
-//                                                .build()
-//                                ),
-                                ChatMessageV2.user(
-                                        UserMessage.builder()
-                                                .content(UserMessageContent.of(prompt))
-                                                .build()
-                                )
-                        ))
-                        .build()
-        );
-
-        // Now extract just the summary text
-        if (response != null
-                && response.getMessage() != null
-                && response.getMessage().getContent() != null
-                && !response.getMessage().getContent().isEmpty()) {
-
-            // e.g. first content piece
-            // depending on SDK, content objects might have getText() or get("text")
-            String summaryText = response.getMessage().getContent().get().get(0).getText().get().getText();
-            // Save the summary as a message if response is successful
-            saveSummaryAsMessage(chatId, userEmail, summaryText);
-            return summaryText;
-        } else {
-            return null;
-        }
+        return null;
     }
 
-    /**
-     * Persists the generated summary as a Message entity under the given chat or group.
-     *
-     * @param chatId         UUID of the chat or group
-     * @param userEmail      Email of the requesting user
-     * @param summaryContent The summary text to save
-     */
     private void saveSummaryAsMessage(UUID chatId, String userEmail, String summaryContent) {
         if (summaryContent == null || summaryContent.trim().isEmpty()) {
+            log.warn("Skipping empty summary for chatId={}", chatId);
             return;
         }
 
@@ -142,9 +132,12 @@ public class ChatSummaryService {
             }
 
             messageRepository.save(summaryMessage);
+            log.info("Summary saved successfully for chatId={} by user={}", chatId, userEmail);
+
+        } catch (UsernameNotFoundException e) {
+            log.error("User not found while saving summary for chatId={}: {}", chatId, e.getMessage(), e);
         } catch (Exception e) {
-            System.err.println("Failed to save summary as message: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to save summary as message for chatId={}", chatId, e);
         }
     }
 
