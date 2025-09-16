@@ -6,6 +6,7 @@ import com.shubham.chatsapp.entity.ChatSummaries;
 import com.shubham.chatsapp.service.ChatSummaryService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -22,19 +23,21 @@ public class SummaryController {
     }
 
     @GetMapping("/{chatId}")
-    public ResponseEntity<String> summarizeChat(@PathVariable UUID chatId) {
-        ChatResponse response = chatSummaryService.generateChatSummary(chatId);
-        System.out.println("ChatResponse: " + response);
+    public ResponseEntity<String> summarizeChat(@PathVariable UUID chatId, Authentication authentication) {
+        String authenticatedEmail = authentication.getName();
 
-        if (response == null || response.getMessage() == null ||
-                response.getMessage().getContent() == null || response.getMessage().getContent().isEmpty()) {
+        try {
+            String summary = chatSummaryService.generateChatSummaryText(chatId, authenticatedEmail);
+            if (summary == null || summary.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("No messages found in the last 2 days to summarize.");
+            }
+            return ResponseEntity.ok(summary);
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to generate summary.");
+                    .body("Failed to generate summary: " + e.getMessage());
         }
-
-        Optional<TextContent> optionalContent = response.getMessage().getContent().get().get(0).getText();
-        String summary = optionalContent.map(TextContent::getText).orElse("Summary not available");
-
-        return ResponseEntity.ok(summary);
     }
+
+
 }

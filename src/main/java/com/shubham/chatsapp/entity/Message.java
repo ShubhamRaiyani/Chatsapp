@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.ToString;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -36,10 +37,21 @@ public class Message {
 
     private String content;
 
-    private Instant createdAt;
+    private LocalDateTime createdAt;
 
     private String messageType; // TEXT, IMAGE, VIDEO, etc.
 
     @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<MessageStatus> statuses = new ArrayList<>();
+
+    @Override
+    public String toString() {
+        return "Message{" +
+                "id=" + id +
+                ", content='" + content + '\'' +
+                ", createdAt=" + createdAt +
+                ", messageType='" + messageType + '\'' +
+                '}';
+    }
+
 }

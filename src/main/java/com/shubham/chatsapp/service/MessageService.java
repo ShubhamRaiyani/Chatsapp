@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
@@ -46,7 +47,7 @@ public class MessageService {
 
         Message message = new Message();
         message.setContent(request.getContent());
-        message.setCreatedAt(Instant.now());
+        message.setCreatedAt(LocalDateTime.now());
         message.setSender(sender);
         message.setMessageType(request.getMessageType());
 
@@ -145,13 +146,13 @@ public class MessageService {
     // Keep your existing methods unchanged
     public Page<MessageDTO> getMessagesForChat(UUID chatId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Message> messagePage = messageRepository.findByChat_IdOrderByCreatedAtAsc(chatId, pageable);
+        Page<Message> messagePage = messageRepository.findByChat_IdOrderByCreatedAtDesc(chatId, pageable);
         return messagePage.map(this::mapToDTO);
     }
 
     public Page<MessageDTO> getMessagesForGroup(UUID groupId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Message> messagePage = messageRepository.findByGroup_IdOrderByCreatedAtAsc(groupId, pageable);
+        Page<Message> messagePage = messageRepository.findByGroup_IdOrderByCreatedAtDesc(groupId, pageable);
         return messagePage.map(this::mapToDTO);
     }
 
@@ -162,6 +163,7 @@ public class MessageService {
         dto.setChatId(message.getChat() != null ? message.getChat().getId() : null);
         dto.setGroupId(message.getGroup() != null ? message.getGroup().getId() : null);
         dto.setSentAt(message.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime());
+        dto.setSenderEmail(message.getSender().getEmail());
         dto.setMessageType(message.getMessageType());
 
         // Add receiver email for direct messages only

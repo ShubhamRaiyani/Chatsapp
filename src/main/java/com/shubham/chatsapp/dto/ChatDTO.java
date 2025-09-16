@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,7 +14,7 @@ public class ChatDTO {
     private String displayName;
     @JsonProperty("isGroup")
     private boolean isGroup;
-    private Instant lastActivity;
+    private LocalDateTime lastActivity;
     private String lastMessage;
     private Long unreadCount; // new add (left handling it in backend)
     private String receiverEmail;

@@ -1,11 +1,13 @@
 package com.shubham.chatsapp.entity;
 
+import ch.qos.logback.classic.spi.LoggerContextAware;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.ToString;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +30,6 @@ public class Chat {
     @JoinColumn(name = "user2")
     private User user2;
 
-    private Instant timestamp;
+    private LocalDateTime timestamp;
 
 }

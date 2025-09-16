@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,10 +18,10 @@ import java.util.UUID;
 public interface MessageRepository extends JpaRepository<Message, UUID> {
 
     // For personal chat
-    Page<Message> findByChat_IdOrderByCreatedAtAsc(UUID chatId, Pageable pageable);
+    Page<Message> findByChat_IdOrderByCreatedAtDesc(UUID chatId, Pageable pageable);
 
     // For group chat
-    Page<Message> findByGroup_IdOrderByCreatedAtAsc(UUID groupId, Pageable pageable);
+    Page<Message> findByGroup_IdOrderByCreatedAtDesc(UUID groupId, Pageable pageable);
 
     Optional<Message> findById(UUID messageId);
 
@@ -29,6 +31,18 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
         WHERE m.chat.id = :id OR m.group.id = :id
     """)
     List<Message> findByChatIdOrGroupId(@Param("id") UUID id);
+
+
+
+    @Query("SELECT m FROM Message m WHERE " +
+            "((m.chat IS NOT NULL AND m.chat.id = :chatId) OR " +
+            "(m.group IS NOT NULL AND m.group.id = :chatId)) " +
+            "AND m.createdAt >= :cutoff " +
+            "ORDER BY m.createdAt ASC")
+    List<Message> findRecentMessages(@Param("chatId") UUID chatId,
+                                     @Param("cutoff") LocalDateTime cutoff);
+
+
 
     @Query("SELECT m FROM Message m " +
             "LEFT JOIN m.statuses s ON s.user.id = :userId " +

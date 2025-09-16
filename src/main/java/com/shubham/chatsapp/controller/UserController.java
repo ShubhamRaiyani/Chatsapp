@@ -38,7 +38,7 @@ public class UserController {
 
     @GetMapping("/search")
     public ResponseEntity<List<UserDTO>> searchUsers(@RequestParam String emailFragment) {
-        List<User> users = userRepository.findByEmailContainingIgnoreCaseAndEnabledTrue(emailFragment);
+        List<User> users = userRepository.findByEmailUsernameContainingAndEnabledTrue(emailFragment);
         return ResponseEntity.ok(users.stream().map(UserDTO::new).toList());
     }
 

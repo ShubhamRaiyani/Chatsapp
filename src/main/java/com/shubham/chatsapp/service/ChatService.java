@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -52,7 +53,7 @@ public class ChatService {
 
         // Create new chat
         Chat chat = new Chat();
-        chat.setTimestamp(Instant.now());
+        chat.setTimestamp(LocalDateTime.now());
         chat.setUser1(user1);
         chat.setUser2(user2);
 
@@ -62,7 +63,7 @@ public class ChatService {
         welcomeMessage.setReceiver(user2);
         welcomeMessage.setChat(chat);
         welcomeMessage.setContent("👋 Welcome " + user1.getEmail() + " and " + user2.getEmail() + "!");
-        welcomeMessage.setCreatedAt(Instant.now());
+        welcomeMessage.setCreatedAt(LocalDateTime.now());
 
         // Add message to chat
         chat.getMessages().add(welcomeMessage);
@@ -83,7 +84,7 @@ public class ChatService {
         Group group = new Group();
         group.setName(request.getName());
         group.setCreatedBy(creator);
-        group.setCreatedAt(Instant.now());
+        group.setCreatedAt(LocalDateTime.now());
         Group savedGroup = groupRepository.save(group);
 
         // Add creator as admin
@@ -115,7 +116,7 @@ public class ChatService {
         welcome.setSender(creator);
         welcome.setGroup(savedGroup);
         welcome.setContent("Group '" + savedGroup.getName() + "' has been created by " + creator.getEmail());
-        welcome.setCreatedAt(Instant.now());
+        welcome.setCreatedAt(LocalDateTime.now());
         messageRepository.save(welcome);
 
         return mapGroupToChatDTO(savedGroup,creatorEmail);
@@ -166,7 +167,7 @@ public class ChatService {
         System.out.println(receiverEmail + "reciever email in mapcaht tot dto");
         dto.setReceiverEmail(receiverEmail);
         // Last activity is chat's timestamp or last message createdAt
-        Instant lastActivity = chat.getMessages().stream()
+        LocalDateTime lastActivity = chat.getMessages().stream()
                 .map(Message::getCreatedAt)
                 .max(Comparator.naturalOrder())
                 .orElse(chat.getTimestamp());
@@ -190,7 +191,7 @@ public class ChatService {
         dto.setId(group.getId());
         dto.setDisplayName(group.getName());
         dto.setGroup(true);
-        Instant lastActivity = group.getMessages().stream()
+        LocalDateTime lastActivity = group.getMessages().stream()
                 .map(Message::getCreatedAt)
                 .max(Comparator.naturalOrder())
                 .orElse(group.getCreatedAt());
