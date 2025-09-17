@@ -46,18 +46,35 @@ public class WebSocketEventListener {
         String sessionId = sha.getSessionId();
         String destination = sha.getDestination();
         String userId = sha.getUser() != null ? sha.getUser().getName() : null;
-        log.info("📥 USERID OF USER SUBSCRIBED {}",userId);
+        log.info("📥 USERID OF USER SUBSCRIBED {}", userId);
 
-        if (destination != null && userId != null && destination.startsWith("/topic/chat/")) {
-            String chatId = destination.substring("/topic/chat/".length());
-            log.info("Chatid check {} and user id {} ", chatId,userId);
-        User byEmail = userRepository.findByEmail(userId).orElseThrow(()-> new IllegalArgumentException("Email from the websocket is not valid"));
-        tracker.addSubscription(sessionId, byEmail.getId(), UUID.fromString(chatId));
-        messageStatusService.markAllMessagesAsRead(UUID.fromString(chatId), byEmail.getId(), false); //  userid = email
+        if (destination != null && userId != null) {
+            User byEmail = userRepository.findByEmail(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("Email from the websocket is not valid"));
+
+            // Handle DIRECT CHAT subscriptions
+            if (destination.startsWith("/topic/chat/")) {
+                String chatId = destination.substring("/topic/chat/".length());
+                log.info("Chatid check {} and user id {} ", chatId, userId);
+                tracker.addSubscription(sessionId, byEmail.getId(), UUID.fromString(chatId));
+                messageStatusService.markAllMessagesAsRead(UUID.fromString(chatId), byEmail.getId(), false);
+            }
+            // ✅ ADD GROUP CHAT subscriptions
+            else if (destination.startsWith("/topic/group/")) {
+                String groupId = destination.substring("/topic/group/".length());
+                log.info("Group subscription: groupId={}, userId={}", groupId, userId);
+
+                // Add group subscription tracking
+                tracker.addGroupSubscription(sessionId, byEmail.getId(), UUID.fromString(groupId));
+
+                // Mark all unread group messages as read
+                messageStatusService.markAllMessagesAsRead(UUID.fromString(groupId), byEmail.getId(), true);
+                log.info("Marked all group messages as read for user: {}", userId);
+            }
+        }
     }
-}
 
-@EventListener
+    @EventListener
 public void handleDisconnect(@Nonnull SessionDisconnectEvent event) {
     log.info("DISCONNECT EVENT RECEIVED");
 

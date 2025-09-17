@@ -87,6 +87,7 @@ public class WebSocketController {
                 UUID memberId = member.getId();
 
                 if (sessionTracker.isUserConnected(memberId)) {
+                    // ✅ FIXED - Check if user is subscribed to this specific group
                     if (sessionTracker.isUserSubscribedToGroup(memberId, savedMessage.getGroup().getId())) {
                         messageStatusService.markRead(savedMessage, member);
                         System.out.println("Group message marked as READ for: " + member.getEmail());
@@ -96,10 +97,12 @@ public class WebSocketController {
                     }
                 } else {
                     System.out.println("Group member offline: " + member.getEmail());
+                    // Status remains SENT for offline users
                 }
             }
         }
     }
+
 
 //    @MessageMapping("/chat.read") // For both direct and group read receipts
 //    public void handleReadMessages(@Payload ReadReceiptDTO payload, Authentication authentication) {

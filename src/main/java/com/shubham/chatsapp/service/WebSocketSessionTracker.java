@@ -89,23 +89,33 @@ public class WebSocketSessionTracker {
 
     }
     public void removeChatSubscriptionsForSession(String sessionId) {
-        String userId = redisTemplate.opsForValue().get("session:" + sessionId);  // Get userId from session
+        String userId = redisTemplate.opsForValue().get("session:" + sessionId);
 
         if (userId != null) {
+            // Remove CHAT subscriptions
             String sessionChatsKey = "session:" + sessionId + ":chats";
             Set<String> chatIds = redisTemplate.opsForSet().members(sessionChatsKey);
-
             if (chatIds != null) {
                 for (String chatId : chatIds) {
                     redisTemplate.opsForSet().remove("user:" + userId + ":chats", chatId);
                 }
             }
-
-            // Remove the chat set for the session
             redisTemplate.delete(sessionChatsKey);
-            log.warn("Removed chat subscriptions for session: {}", sessionId);
+
+            // ✅ ADD GROUP subscriptions cleanup
+            String sessionGroupsKey = "session:" + sessionId + ":groups";
+            Set<String> groupIds = redisTemplate.opsForSet().members(sessionGroupsKey);
+            if (groupIds != null) {
+                for (String groupId : groupIds) {
+                    redisTemplate.opsForSet().remove("user:" + userId + ":groups", groupId);
+                }
+            }
+            redisTemplate.delete(sessionGroupsKey);
+
+            log.warn("Removed chat and group subscriptions for session: {}", sessionId);
         }
     }
+
     public boolean isUserConnected(UUID userId) {
         Boolean result =Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(ONLINE_USER_KEY, String.valueOf(userId)));
         System.out.println("Isuserconnected "+ result);
@@ -126,6 +136,13 @@ public class WebSocketSessionTracker {
         System.out.println("is subscribed to group: " + result);
         return result;
     }
+
+    public void addGroupSubscription(String sessionId, UUID userId, UUID groupId) {
+        redisTemplate.opsForSet().add("user:" + userId + ":groups", groupId.toString());
+        redisTemplate.opsForSet().add("session:" + sessionId + ":groups", groupId.toString());
+        log.warn("Added group {} to user {} and session {}", groupId, userId, sessionId);
+    }
+
 
 // You'll also need to modify the WebSocketEventListener to handle group subscriptions
 
