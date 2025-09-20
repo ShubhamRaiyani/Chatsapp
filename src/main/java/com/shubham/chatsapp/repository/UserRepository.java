@@ -17,7 +17,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findByEmailContainingIgnoreCaseAndEnabledTrue(String emailFragment);
 
     @Query("SELECT u FROM User u WHERE " +
-            "SUBSTRING(u.email, 1, POSITION('@' IN u.email) - 1) " +
-            "LIKE CONCAT('%', :usernameFragment, '%') AND u.enabled = true")
+            "LOWER(SUBSTRING(u.email, 1, POSITION('@' IN u.email) - 1)) " +
+            "LIKE CONCAT('%', LOWER(:usernameFragment), '%') " +
+            "AND u.enabled = true")
     List<User> findByEmailUsernameContainingAndEnabledTrue(@Param("usernameFragment") String usernameFragment);
+
 }
