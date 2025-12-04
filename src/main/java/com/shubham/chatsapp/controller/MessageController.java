@@ -1,5 +1,6 @@
 package com.shubham.chatsapp.controller;
 
+import com.shubham.chatsapp.dto.CursorMessagePageDTO;
 import com.shubham.chatsapp.dto.MessageDTO;
 import com.shubham.chatsapp.dto.MessageRequest;
 import com.shubham.chatsapp.service.MessageService;
@@ -48,5 +49,23 @@ public class MessageController {
     ) {
         return messageService.getMessagesForGroup(groupId, page, size);
     }
+    // NEW: cursor-based endpoint for personal chat
+    @GetMapping("/chat/{chatId}/cursor")
+    public CursorMessagePageDTO getChatMessagesCursor(
+            @PathVariable UUID chatId,
+            @RequestParam(required = false) UUID beforeMessageId,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return messageService.getMessagesForChatCursor(chatId, beforeMessageId, size);
+    }
 
+    // NEW: cursor-based endpoint for group chat
+    @GetMapping("/group/{groupId}/cursor")
+    public CursorMessagePageDTO getGroupMessagesCursor(
+            @PathVariable UUID groupId,
+            @RequestParam(required = false) UUID beforeMessageId,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return messageService.getMessagesForGroupCursor(groupId, beforeMessageId, size);
+    }
 }

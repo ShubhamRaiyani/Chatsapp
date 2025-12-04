@@ -1,5 +1,6 @@
 package com.shubham.chatsapp.service;
 
+import com.shubham.chatsapp.dto.CursorMessagePageDTO;
 import com.shubham.chatsapp.dto.MessageDTO;
 import com.shubham.chatsapp.entity.*;
 import com.shubham.chatsapp.enums.StatusType;
@@ -178,4 +179,163 @@ public class MessageService {
         return messageRepository.findById(savedMessageDTO.getMessageId())
                 .orElseThrow(() -> new IllegalArgumentException("Message not found"));
     }
+
+    // NEW: cursor-based for personal chat
+    // NEW: cursor-based for personal chat
+    // Cursor-based for personal chat
+    public CursorMessagePageDTO getMessagesForChatCursor(UUID chatId, UUID beforeMessageId, int limit) {
+        LocalDateTime beforeCreatedAt = null;
+
+        if (beforeMessageId != null) {
+            Message cursorMsg = messageRepository.findById(beforeMessageId)
+                    .orElseThrow(() -> new IllegalArgumentException("Cursor message not found"));
+            beforeCreatedAt = cursorMsg.getCreatedAt();
+        }
+
+        Pageable pageable = PageRequest.of(0, limit + 1);
+        List<Message> entities;
+
+        if (beforeCreatedAt == null) {
+            // initial load: latest messages
+            entities = messageRepository.findChatMessagesInitial(chatId, pageable);
+        } else {
+            // older messages before cursor
+            entities = messageRepository.findChatMessagesBeforeCursor(chatId, beforeCreatedAt, pageable);
+        }
+
+        boolean hasMore = entities.size() > limit;
+        if (hasMore) {
+            entities = entities.subList(0, limit);
+        }
+
+        entities.sort(java.util.Comparator.comparing(Message::getCreatedAt));
+
+        List<MessageDTO> dtos = entities.stream()
+                .map(this::mapToDTO)
+                .toList();
+
+        UUID nextCursor = dtos.isEmpty()
+                ? beforeMessageId
+                : dtos.get(0).getMessageId(); // oldest message in this batch
+
+        return new CursorMessagePageDTO(dtos, hasMore, nextCursor);
+    }
+
+    // Cursor-based for group chat
+    public CursorMessagePageDTO getMessagesForGroupCursor(UUID groupId, UUID beforeMessageId, int limit) {
+        LocalDateTime beforeCreatedAt = null;
+
+        if (beforeMessageId != null) {
+            Message cursorMsg = messageRepository.findById(beforeMessageId)
+                    .orElseThrow(() -> new IllegalArgumentException("Cursor message not found"));
+            beforeCreatedAt = cursorMsg.getCreatedAt();
+        }
+
+        Pageable pageable = PageRequest.of(0, limit + 1);
+        List<Message> entities;
+
+        if (beforeCreatedAt == null) {
+            entities = messageRepository.findGroupMessagesInitial(groupId, pageable);
+        } else {
+            entities = messageRepository.findGroupMessagesBeforeCursor(groupId, beforeCreatedAt, pageable);
+        }
+
+        boolean hasMore = entities.size() > limit;
+        if (hasMore) {
+            entities = entities.subList(0, limit);
+        }
+
+        entities.sort(java.util.Comparator.comparing(Message::getCreatedAt));
+
+        List<MessageDTO> dtos = entities.stream()
+                .map(this::mapToDTO)
+                .toList();
+
+        UUID nextCursor = dtos.isEmpty()
+                ? beforeMessageId
+                : dtos.get(0).getMessageId();
+
+        return new CursorMessagePageDTO(dtos, hasMore, nextCursor);
+    }
+
+
+
+//    public CursorMessagePageDTO getMessagesForChatCursor(UUID chatId, UUID beforeMessageId, int limit) {
+//        LocalDateTime beforeCreatedAt = null;
+//
+//        // Only resolve cursor message if provided
+//        if (beforeMessageId != null) {
+//            Message cursorMsg = messageRepository.findById(beforeMessageId)
+//                    .orElseThrow(() -> new IllegalArgumentException("Cursor message not found"));
+//            beforeCreatedAt = cursorMsg.getCreatedAt();
+//        }
+//
+//        // We request limit + 1 to detect hasMore
+//        Pageable pageable = PageRequest.of(0, limit + 1);
+//
+//        List<Message> entities = messageRepository.findChatMessagesBefore(
+//                chatId,
+//                beforeCreatedAt,
+//                pageable
+//        );
+//
+//        boolean hasMore = entities.size() > limit;
+//        if (hasMore) {
+//            entities = entities.subList(0, limit);
+//        }
+//
+//        // Sort ASC for frontend (oldest → newest)
+//        entities.sort(java.util.Comparator.comparing(Message::getCreatedAt));
+//
+//        List<MessageDTO> dtos = entities.stream()
+//                .map(this::mapToDTO)
+//                .toList();
+//
+//        // nextCursor = id of OLDEST message in this batch
+//        UUID nextCursor = dtos.isEmpty()
+//                ? beforeMessageId  // can be null for first load
+//                : dtos.get(0).getMessageId();
+//
+//        return new CursorMessagePageDTO(dtos, hasMore, nextCursor);
+//    }
+//
+//
+//    // NEW: cursor-based for group chat
+//    public CursorMessagePageDTO getMessagesForGroupCursor(UUID groupId, UUID beforeMessageId, int limit) {
+//        LocalDateTime beforeCreatedAt = null;
+//
+//        if (beforeMessageId != null) {
+//            Message cursorMsg = messageRepository.findById(beforeMessageId)
+//                    .orElseThrow(() -> new IllegalArgumentException("Cursor message not found"));
+//            beforeCreatedAt = cursorMsg.getCreatedAt();
+//        }
+//
+//        Pageable pageable = PageRequest.of(0, limit + 1);
+//
+//        List<Message> entities = messageRepository.findGroupMessagesBefore(
+//                groupId,
+//                beforeCreatedAt,
+//                pageable
+//        );
+//
+//        boolean hasMore = entities.size() > limit;
+//        if (hasMore) {
+//            entities = entities.subList(0, limit);
+//        }
+//
+//        entities.sort(java.util.Comparator.comparing(Message::getCreatedAt));
+//
+//        List<MessageDTO> dtos = entities.stream()
+//                .map(this::mapToDTO)
+//                .toList();
+//
+//        UUID nextCursor = dtos.isEmpty()
+//                ? beforeMessageId
+//                : dtos.get(0).getMessageId();
+//
+//        return new CursorMessagePageDTO(dtos, hasMore, nextCursor);
+//    }
+
+
+
 }

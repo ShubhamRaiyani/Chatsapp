@@ -17,22 +17,19 @@ import java.util.UUID;
 @Repository
 public interface MessageRepository extends JpaRepository<Message, UUID> {
 
-    // For personal chat
+    // For personal chat (page-based, old – keep)
     Page<Message> findByChat_IdOrderByCreatedAtDesc(UUID chatId, Pageable pageable);
 
-    // For group chat
+    // For group chat (page-based, old – keep)
     Page<Message> findByGroup_IdOrderByCreatedAtDesc(UUID groupId, Pageable pageable);
 
     Optional<Message> findById(UUID messageId);
-
 
     @Query("""
         SELECT m FROM Message m
         WHERE m.chat.id = :id OR m.group.id = :id
     """)
     List<Message> findByChatIdOrGroupId(@Param("id") UUID id);
-
-
 
     @Query("SELECT m FROM Message m WHERE " +
             "((m.chat IS NOT NULL AND m.chat.id = :chatId) OR " +
@@ -42,9 +39,6 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
             "ORDER BY m.createdAt ASC")
     List<Message> findRecentMessages(@Param("chatId") UUID chatId,
                                      @Param("cutoff") LocalDateTime cutoff);
-
-
-
 
     @Query("SELECT m FROM Message m " +
             "LEFT JOIN m.statuses s ON s.user.id = :userId " +
@@ -61,7 +55,6 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
         """)
     List<Message> findUnreadGroupMessages(@Param("groupId") UUID groupId, @Param("userId") UUID userId);
 
-
     @Query("""
         SELECT m FROM Message m
         LEFT JOIN m.group g
@@ -72,4 +65,56 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
     List<Message> findMessagesForUser(@Param("email") String email);
 
 
+    // =========================
+    // 🔹 CURSOR-BASED QUERIES 🔹
+    // =========================
+
+    // Initial load for personal chat (latest messages, no cursor)
+    @Query("""
+        SELECT m FROM Message m
+        WHERE m.chat.id = :chatId
+        ORDER BY m.createdAt DESC
+        """)
+    List<Message> findChatMessagesInitial(
+            @Param("chatId") UUID chatId,
+            Pageable pageable
+    );
+
+    // Older messages for personal chat (with cursor)
+    @Query("""
+        SELECT m FROM Message m
+        WHERE m.chat.id = :chatId
+          AND m.createdAt < :beforeCreatedAt
+        ORDER BY m.createdAt DESC
+        """)
+    List<Message> findChatMessagesBeforeCursor(
+            @Param("chatId") UUID chatId,
+            @Param("beforeCreatedAt") LocalDateTime beforeCreatedAt,
+            Pageable pageable
+    );
+
+    // Initial load for group chat
+    @Query("""
+        SELECT m FROM Message m
+        WHERE m.group.id = :groupId
+        ORDER BY m.createdAt DESC
+        """)
+    List<Message> findGroupMessagesInitial(
+            @Param("groupId") UUID groupId,
+            Pageable pageable
+    );
+
+    // Older messages for group chat
+    @Query("""
+        SELECT m FROM Message m
+        WHERE m.group.id = :groupId
+          AND m.createdAt < :beforeCreatedAt
+        ORDER BY m.createdAt DESC
+        """)
+    List<Message> findGroupMessagesBeforeCursor(
+            @Param("groupId") UUID groupId,
+            @Param("beforeCreatedAt") LocalDateTime beforeCreatedAt,
+            Pageable pageable
+    );
 }
+
