@@ -1,11 +1,9 @@
 package com.shubham.chatsapp.controller;
 
-
 import com.shubham.chatsapp.dto.AuthResponse;
 import com.shubham.chatsapp.dto.LoginRequest;
 import com.shubham.chatsapp.dto.RegisterRequest;
 import com.shubham.chatsapp.service.AuthService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Generated;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,12 +21,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server   .ResponseStatusException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
 @RestController
-@RequestMapping({"/api/auth"})
+@RequestMapping({ "/api/auth" })
 public class AuthController {
 
     private final AuthService authService;
@@ -37,7 +35,6 @@ public class AuthController {
     private Boolean cookies_secure;
     @Value("${cookies.samesite}")
     private String cookies_samesite;
-
 
     @Generated
     public AuthController(final AuthService authService) {
@@ -69,7 +66,7 @@ public class AuthController {
         }
     }
 
-    @GetMapping({"/verify"})
+    @GetMapping({ "/verify" })
     public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
         try {
             this.authService.verifyToken(token);
@@ -112,7 +109,7 @@ public class AuthController {
                 .sameSite(cookies_samesite)
                 .maxAge(60 * 60 * 24 * 7)
                 .build();
-        System.out.println("Cookies auth controller= "+ cookie.toString());
+        System.out.println("Cookies auth controller= " + cookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         return ResponseEntity.ok().build();
@@ -124,5 +121,70 @@ public class AuthController {
         return ResponseEntity.ok(new AuthResponse("Logged out successfully", null));
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<AuthResponse> forgotPassword(@RequestBody Map<String, String> body) {
+        try {
+            String email = body.get("email");
+            if (email == null || email.isEmpty()) {
+                return ResponseEntity.badRequest().body(new AuthResponse("Email is required", null));
+            }
+            authService.forgotPassword(email);
+            return ResponseEntity.ok(new AuthResponse("Password reset link sent to your email", null));
+        } catch (ResponseStatusException e) {
+            // Mask user not found for security, or return it if dev requires
+            return ResponseEntity.ok(new AuthResponse("Password reset link sent to your email", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new AuthResponse("Failed to send reset email", null));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<AuthResponse> resetPassword(@RequestBody Map<String, String> body) {
+        try {
+            String token = body.get("token");
+            String newPassword = body.get("newPassword");
+
+            if (token == null || token.isEmpty() || newPassword == null || newPassword.isEmpty()) {
+                return ResponseEntity.badRequest().body(new AuthResponse("Token and new password are required", null));
+            }
+
+            authService.resetPassword(token, newPassword);
+            return ResponseEntity.ok(new AuthResponse("Password reset successfully", null));
+
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(new AuthResponse(e.getReason(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new AuthResponse("Something went wrong", null));
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<AuthResponse> changePassword(@RequestBody Map<String, String> body) {
+        try {
+            String oldPassword = body.get("oldPassword");
+            String newPassword = body.get("newPassword");
+
+            if (oldPassword == null || oldPassword.isEmpty() || newPassword == null || newPassword.isEmpty()) {
+                return ResponseEntity.badRequest().body(new AuthResponse("Old and new passwords are required", null));
+            }
+
+            authService.changePassword(oldPassword, newPassword);
+            return ResponseEntity.ok(new AuthResponse("Password changed successfully", null));
+
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(new AuthResponse(e.getReason(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new AuthResponse("Something went wrong", null));
+        }
+    }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthResponse> refreshToken(
+            @org.springframework.web.bind.annotation.CookieValue(name = "refresh_token", required = false) String refreshToken) {
+        return authService.refreshToken(refreshToken);
+    }
 
 }

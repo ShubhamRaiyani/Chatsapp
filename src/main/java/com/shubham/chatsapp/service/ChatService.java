@@ -7,6 +7,7 @@ import com.shubham.chatsapp.dto.GroupCreateRequest;
 import com.shubham.chatsapp.entity.*;
 import com.shubham.chatsapp.enums.StatusType;
 import com.shubham.chatsapp.repository.*;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

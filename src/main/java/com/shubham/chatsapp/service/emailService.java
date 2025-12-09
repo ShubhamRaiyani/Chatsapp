@@ -25,6 +25,16 @@ public class emailService {
 
         sendHtmlEmail(to, "Verify Your Email", htmlContent);
     }
+
+    public void sendPasswordResetEmail(String to, String resetUrl) {
+        Context context = new Context();
+        context.setVariable("resetUrl", resetUrl);
+
+        String htmlContent = templateEngine.process("resetPassword", context);
+
+        sendHtmlEmail(to, "Reset Your Password", htmlContent);
+    }
+
     private void sendHtmlEmail(String to, String subject, String htmlContent) {
         MimeMessage message = mailSender.createMimeMessage();
 

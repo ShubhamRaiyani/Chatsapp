@@ -1,6 +1,5 @@
 package com.shubham.chatsapp.repository;
 
-
 import com.shubham.chatsapp.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,6 +13,7 @@ import java.util.UUID;
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
+
     List<User> findByEmailContainingIgnoreCaseAndEnabledTrue(String emailFragment);
 
     @Query("SELECT u FROM User u WHERE " +
@@ -21,5 +21,4 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             "LIKE CONCAT('%', LOWER(:usernameFragment), '%') " +
             "AND u.enabled = true")
     List<User> findByEmailUsernameContainingAndEnabledTrue(@Param("usernameFragment") String usernameFragment);
-
 }

@@ -16,16 +16,18 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatSummaries {
+
     @Id
     @GeneratedValue
     private UUID id;
 
     @ManyToOne
     private Chat chat;
+
     @ManyToOne
     private Group group;
 
-
     private String summaryText;
+
     private Instant generatedAt;
 }

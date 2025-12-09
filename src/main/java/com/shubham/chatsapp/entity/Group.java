@@ -17,12 +17,15 @@ public class Group {
     @Id
     @GeneratedValue
     private UUID id;
+
     private String name;
+
     @ManyToOne
     @JoinColumn(name = "created_by_id")
     private User createdBy;
 
     private LocalDateTime createdAt;
+
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Message> messages = new ArrayList<>();
 

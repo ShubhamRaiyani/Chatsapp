@@ -27,7 +27,7 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    private boolean enabled;   // for email verification
+    private boolean enabled; // for email verification
 
     private String bio;
 

@@ -39,13 +39,13 @@ public class JwtService {
                 .compact();
     }
 
-    public String   extractEmail(String token) {
-        return (String)this.extractClaim(token, Claims::getSubject);
+    public String extractEmail(String token) {
+        return (String) this.extractClaim(token, Claims::getSubject);
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         Claims claims = this.extractAllClaims(token);
-        return (T)claimsResolver.apply(claims);
+        return (T) claimsResolver.apply(claims);
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
@@ -58,12 +58,13 @@ public class JwtService {
     }
 
     private Date extractExpiration(String token) {
-        return (Date)this.extractClaim(token, Claims::getExpiration);
+        return (Date) this.extractClaim(token, Claims::getExpiration);
     }
 
     private Claims extractAllClaims(String token) {
-        return (Claims)Jwts.parser().setSigningKey(this.getSigningKey()).build().parseClaimsJws(token).getBody();
+        return (Claims) Jwts.parser().setSigningKey(this.getSigningKey()).build().parseClaimsJws(token).getBody();
     }
+
     public Authentication getAuthentication(String token) {
         String email = extractEmail(token);
         return new UsernamePasswordAuthenticationToken(email, null, null);

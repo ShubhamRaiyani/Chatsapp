@@ -1,12 +1,8 @@
 package com.shubham.chatsapp.entity;
-
-import ch.qos.logback.classic.spi.LoggerContextAware;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.ToString;
-
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,13 +19,14 @@ public class Chat {
     @JsonManagedReference
     @ToString.Exclude
     private List<Message> messages = new ArrayList<>();
+
     @ManyToOne
     @JoinColumn(name = "user1")
     private User user1;
+
     @ManyToOne
     @JoinColumn(name = "user2")
     private User user2;
 
     private LocalDateTime timestamp;
-
 }

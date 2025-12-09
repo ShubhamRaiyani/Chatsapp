@@ -1,6 +1,5 @@
 package com.shubham.chatsapp.config;
 
-
 import java.util.List;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -35,7 +34,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity
 public class SecurityConfig {
     private final OAuth2LoginSuccessHandler oAuthLoginSuccessHandler;
-    private final CustomUserDetailsService customUserDetailsServiceervice;
+    private final CustomUserDetailsService customUserDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     @Value("${frontend.url}")
     private String frontendURL;
@@ -48,24 +47,22 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/oauth2/**", "/login/**", "/ws").permitAll()
                         .anyRequest().authenticated())
-                .sessionManagement((session) ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // try
+                .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // try
                 .oauth2Login((oauth2) -> oauth2.loginPage("/oauth2/authorization/google")
                         .successHandler(this.oAuthLoginSuccessHandler))
                 .authenticationProvider(this.authenticationProvider())
                 .addFilterBefore(this.jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling()
 
-
                 .defaultAuthenticationEntryPointFor(
-                        (request, response, authException) ->
-                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED), new AntPathRequestMatcher("/api/**"));
-        return (SecurityFilterChain)http.build();
+                        (request, response, authException) -> response.sendError(HttpServletResponse.SC_UNAUTHORIZED),
+                        new AntPathRequestMatcher("/api/**"));
+        return (SecurityFilterChain) http.build();
     }
 
     private AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(this.customUserDetailsServiceervice);
+        provider.setUserDetailsService(this.customUserDetailsService);
         provider.setPasswordEncoder(this.passwordEncoder());
         return provider;
     }
@@ -93,9 +90,11 @@ public class SecurityConfig {
     }
 
     @Generated
-    public SecurityConfig(final OAuth2LoginSuccessHandler oAuthLoginSuccessHandler, final CustomUserDetailsService customUserDetailsServiceervice, final JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(final OAuth2LoginSuccessHandler oAuthLoginSuccessHandler,
+            final CustomUserDetailsService customUserDetailsService,
+            final JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.oAuthLoginSuccessHandler = oAuthLoginSuccessHandler;
-        this.customUserDetailsServiceervice = customUserDetailsServiceervice;
+        this.customUserDetailsService = customUserDetailsService;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 }
