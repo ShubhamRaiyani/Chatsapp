@@ -15,16 +15,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
-
 @RestController
 @RequestMapping({ "/api/auth" })
 public class AuthController {
@@ -43,6 +37,8 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
+        System.out.println("[REGISTER] Request received: " + request);
+
         try {
             boolean registered = this.authService.registerUser(request);
 
@@ -68,6 +64,8 @@ public class AuthController {
 
     @GetMapping({ "/verify" })
     public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
+        System.out.println("[VERIFY EMAIL] Token received: " + token);
+
         try {
             this.authService.verifyToken(token);
             return ResponseEntity.ok("Email verified successfully!");
@@ -78,6 +76,8 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req, HttpServletResponse response) {
+        System.out.println("[LOGIN] Login attempt for email: " + req.getEmail());
+
         try {
             return authService.loginVerify(req, response);
         } catch (UsernameNotFoundException e) {
@@ -97,11 +97,14 @@ public class AuthController {
 
     @PostMapping("/oauth2/callback")
     public ResponseEntity<?> oauth2Callback(@RequestBody Map<String, String> body, HttpServletResponse response) {
+        System.out.println("[OAUTH2 CALLBACK] Received body: " + body);
+
         String token = body.get("token");
         if (token == null) {
+            System.out.println("[OAUTH2 CALLBACK] Error: Missing token");
             return ResponseEntity.badRequest().build();
         }
-        // Set cookie with HttpOnly flag and secure flags as appropriate
+
         ResponseCookie cookie = ResponseCookie.from("AUTH-TOKEN", token)
                 .httpOnly(true)
                 .secure(cookies_secure)
@@ -109,7 +112,7 @@ public class AuthController {
                 .sameSite(cookies_samesite)
                 .maxAge(60 * 60 * 24 * 7)
                 .build();
-        System.out.println("Cookies auth controller= " + cookie.toString());
+        System.out.println("Cookies auth controller = " + cookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         return ResponseEntity.ok().build();
@@ -117,12 +120,16 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<AuthResponse> logout(HttpServletResponse response) {
+        System.out.println("[LOGOUT] Logout requested");
+
         authService.logoutUser(response);
         return ResponseEntity.ok(new AuthResponse("Logged out successfully", null));
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<AuthResponse> forgotPassword(@RequestBody Map<String, String> body) {
+        System.out.println("[FORGOT PASSWORD] Request body: " + body);
+
         try {
             String email = body.get("email");
             if (email == null || email.isEmpty()) {
@@ -131,7 +138,6 @@ public class AuthController {
             authService.forgotPassword(email);
             return ResponseEntity.ok(new AuthResponse("Password reset link sent to your email", null));
         } catch (ResponseStatusException e) {
-            // Mask user not found for security, or return it if dev requires
             return ResponseEntity.ok(new AuthResponse("Password reset link sent to your email", null));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -141,6 +147,8 @@ public class AuthController {
 
     @PostMapping("/reset-password")
     public ResponseEntity<AuthResponse> resetPassword(@RequestBody Map<String, String> body) {
+        System.out.println("[RESET PASSWORD] Request body: " + body);
+
         try {
             String token = body.get("token");
             String newPassword = body.get("newPassword");
@@ -162,6 +170,8 @@ public class AuthController {
 
     @PostMapping("/change-password")
     public ResponseEntity<AuthResponse> changePassword(@RequestBody Map<String, String> body) {
+        System.out.println("[CHANGE PASSWORD] Request body: " + body);
+
         try {
             String oldPassword = body.get("oldPassword");
             String newPassword = body.get("newPassword");
@@ -183,8 +193,10 @@ public class AuthController {
 
     @PostMapping("/refresh-token")
     public ResponseEntity<AuthResponse> refreshToken(
-            @org.springframework.web.bind.annotation.CookieValue(name = "refresh_token", required = false) String refreshToken) {
+            @CookieValue(name = "refresh_token", required = false) String refreshToken) {
+
+        System.out.println("[REFRESH TOKEN] refresh_token cookie: " + refreshToken);
+
         return authService.refreshToken(refreshToken);
     }
-
 }

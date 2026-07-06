@@ -165,7 +165,7 @@ public class ChatService {
         } else if (chat.getUser2() != null && !chat.getUser2().getEmail().equals(currentUserEmail)) {
             receiverEmail = chat.getUser2().getEmail();
         }
-        System.out.println(receiverEmail + "reciever email in mapcaht tot dto");
+//        System.out.println(receiverEmail + "reciever email in mapcaht tot dto");
         dto.setReceiverEmail(receiverEmail);
         // Last activity is chat's timestamp or last message createdAt
         LocalDateTime lastActivity = chat.getMessages().stream()

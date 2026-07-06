@@ -54,9 +54,10 @@ public class WebSocketController {
         // Broadcast to chat topic
         messagingTemplate.convertAndSend("/topic/chat/" + savedMessageDTO.getChatId(), savedMessageDTO);
 
-        // Handle receiver status
+        // Push notification to receiver's personal queue so their sidebar updates even when they have another chat open
         User receiverUser = savedMessage.getReceiver();
         UUID receiverUserId = receiverUser.getId();
+        messagingTemplate.convertAndSendToUser(receiverUser.getEmail(), "/queue/notifications", savedMessageDTO);
 
         if (sessionTracker.isUserConnected(receiverUserId)) {
             if (sessionTracker.isUserSubscribedToChat(receiverUserId, savedMessage.getChat().getId())) {
@@ -81,10 +82,13 @@ public class WebSocketController {
 
         System.out.println("Processing group message for " + groupMembers.size() + " members");
 
-        // Handle status for each group member
+        // Handle status for each group member and push sidebar notification
         for (User member : groupMembers) {
             if (!member.getId().equals(sender.getId())) { // Skip sender
                 UUID memberId = member.getId();
+
+                // Push notification to member's personal queue regardless of online status
+                messagingTemplate.convertAndSendToUser(member.getEmail(), "/queue/notifications", savedMessageDTO);
 
                 if (sessionTracker.isUserConnected(memberId)) {
                     // ✅ FIXED - Check if user is subscribed to this specific group
@@ -97,7 +101,6 @@ public class WebSocketController {
                     }
                 } else {
                     System.out.println("Group member offline: " + member.getEmail());
-                    // Status remains SENT for offline users
                 }
             }
         }
