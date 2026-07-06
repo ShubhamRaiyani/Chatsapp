@@ -9,10 +9,9 @@ import com.shubham.chatsapp.service.WebSocketSessionTracker;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 import java.util.List;
 import java.util.Set;
@@ -32,8 +31,6 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<UserProfile> getMyProfile(Authentication authentication) {
         String email = authentication.getName();
-        System.out.println(email);
-        System.out.println(authentication + "hello");
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not foundss"));
         user.setStatus("online");
@@ -43,6 +40,39 @@ public class UserController {
     @GetMapping("/online")
     public ResponseEntity<Set<String>> getOnlineUsers() {
         return ResponseEntity.ok(sessionTracker.getAllOnlineEmails());
+    }
+
+    @GetMapping("/check-username")
+    public ResponseEntity<java.util.Map<String, Boolean>> checkUsername(
+            @RequestParam String username,
+            Authentication authentication) {
+        String currentUserEmail = authentication.getName();
+        java.util.Optional<User> existing = userRepository.findFirstByUsername(username.trim());
+        boolean available = existing.isEmpty() || existing.get().getEmail().equals(currentUserEmail);
+        return ResponseEntity.ok(java.util.Map.of("available", available));
+    }
+
+    @PutMapping("/username")
+    public ResponseEntity<?> updateUsername(@RequestBody Map<String, String> body, Authentication authentication) {
+        String newUsername = body.get("username");
+        if (newUsername == null || newUsername.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Username cannot be empty");
+        }
+        String trimmed = newUsername.trim();
+        if (trimmed.length() < 3) {
+            return ResponseEntity.badRequest().body("Username must be at least 3 characters");
+        }
+        String email = authentication.getName();
+        // Uniqueness check — allow keeping the same username
+        java.util.Optional<User> existing = userRepository.findFirstByUsername(trimmed);
+        if (existing.isPresent() && !existing.get().getEmail().equals(email)) {
+            return ResponseEntity.badRequest().body("Username is already taken");
+        }
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        user.setUsername(trimmed);
+        userRepository.save(user);
+        return ResponseEntity.ok(new UserProfile(user));
     }
 
     @GetMapping("/search")

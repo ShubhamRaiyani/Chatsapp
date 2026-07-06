@@ -2,6 +2,7 @@ package com.shubham.chatsapp.config;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
@@ -13,6 +14,7 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 
 import java.util.Map;
 
+@Slf4j
 @Component
 public class WebSocketAuthInterceptor implements HandshakeInterceptor {
 
@@ -55,25 +57,23 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
                                             userDetails, null, userDetails.getAuthorities());
 
                             attributes.put("user", auth);
-                            System.out.println("✅ WebSocket authentication successful for: " + email);
                             return true;
                         }
                     }
                 } catch (Exception e) {
-                    System.out.println("❌ WebSocket JWT validation failed: " + e.getMessage());
+                    log.warn("WS JWT validation failed: {}", e.getMessage());
                 }
             }
         }
 
-        System.out.println("❌ WebSocket handshake rejected: No valid authentication");
-        return false; // ✅ Reject unauthenticated connections
+        return false;
     }
 
     @Override
     public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                WebSocketHandler wsHandler, Exception exception) {
         if (exception != null) {
-            System.out.println("❌ WebSocket handshake error: " + exception.getMessage());
+            log.warn("WS handshake error: {}", exception.getMessage());
         }
     }
 }

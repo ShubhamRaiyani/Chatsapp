@@ -34,9 +34,6 @@ public class WebSocketController {
     public void handleSendMessage(@Payload MessageDTO messageDTO, Authentication authentication) {
         String authenticatedEmail = authentication.getName();
 
-        System.out.println(">>> handleSendMessage called for: " +
-                (messageDTO.getChatId() != null ? "Direct Chat" : "Group Chat"));
-
         // Save message to database
         MessageDTO savedMessageDTO = messageService.sendMessage(messageDTO, authenticatedEmail);
         Message savedMessage = messageService.getMessageFromMessageDTO(savedMessageDTO);
@@ -63,13 +60,9 @@ public class WebSocketController {
         if (sessionTracker.isUserConnected(receiverUserId)) {
             if (sessionTracker.isUserSubscribedToChat(receiverUserId, savedMessage.getChat().getId())) {
                 messageStatusService.markRead(savedMessage, receiverUser);
-                System.out.println("Message marked as READ for receiver: " + receiverUser.getEmail());
             } else {
                 messageStatusService.markDelivered(savedMessage, receiverUser);
-                System.out.println("Message marked as DELIVERED for receiver: " + receiverUser.getEmail());
             }
-        } else {
-            System.out.println("Receiver is offline, status remains SENT");
         }
     }
 
@@ -93,27 +86,17 @@ public class WebSocketController {
         List<User> groupMembers = messageService.getGroupMembers(savedMessage.getGroup().getId());
         User sender = savedMessage.getSender();
 
-        System.out.println("Processing group message for " + groupMembers.size() + " members");
-
-        // Handle status for each group member and push sidebar notification
         for (User member : groupMembers) {
-            if (!member.getId().equals(sender.getId())) { // Skip sender
+            if (!member.getId().equals(sender.getId())) {
                 UUID memberId = member.getId();
-
-                // Push notification to member's personal queue regardless of online status
                 messagingTemplate.convertAndSendToUser(member.getEmail(), "/queue/notifications", savedMessageDTO);
 
                 if (sessionTracker.isUserConnected(memberId)) {
-                    // ✅ FIXED - Check if user is subscribed to this specific group
                     if (sessionTracker.isUserSubscribedToGroup(memberId, savedMessage.getGroup().getId())) {
                         messageStatusService.markRead(savedMessage, member);
-                        System.out.println("Group message marked as READ for: " + member.getEmail());
                     } else {
                         messageStatusService.markDelivered(savedMessage, member);
-                        System.out.println("Group message marked as delivered for: " + member.getEmail());
                     }
-                } else {
-                    System.out.println("Group member offline: " + member.getEmail());
                 }
             }
         }

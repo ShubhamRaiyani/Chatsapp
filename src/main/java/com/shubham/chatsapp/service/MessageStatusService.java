@@ -40,12 +40,10 @@ public class MessageStatusService {
 
         if (optional.isPresent()) {
             MessageStatus current = optional.get();
-            log.info("found existing status for message {}", message.getId());
             if (status.ordinal() > current.getStatus().ordinal()) {
                 current.setStatus(status);
                 current.setUpdatedAt(Instant.now());
                 statusRepository.save(current);
-                System.out.println("saved updated read status");
             }
         } else {
             MessageStatus newStatus = new MessageStatus();
@@ -54,7 +52,6 @@ public class MessageStatusService {
             newStatus.setStatus(status);
             newStatus.setUpdatedAt(Instant.now());
             statusRepository.save(newStatus);
-            System.out.println("saved new message read");
         }
     }
 
@@ -82,7 +79,6 @@ public class MessageStatusService {
 
         for (MessageStatus status : toDeliver) {
             status.setStatus(StatusType.DELIVERED);
-            log.info("marked delivered ");
         }
 
         return statusRepository.saveAll(toDeliver); // Also returns list to notify senders

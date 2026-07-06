@@ -37,8 +37,6 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
-        System.out.println("[REGISTER] Request received: " + request);
-
         try {
             boolean registered = this.authService.registerUser(request);
 
@@ -64,8 +62,6 @@ public class AuthController {
 
     @GetMapping({ "/verify" })
     public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
-        System.out.println("[VERIFY EMAIL] Token received: " + token);
-
         try {
             this.authService.verifyToken(token);
             return ResponseEntity.ok("Email verified successfully!");
@@ -76,8 +72,6 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest req, HttpServletResponse response) {
-        System.out.println("[LOGIN] Login attempt for email: " + req.getEmail());
-
         try {
             return authService.loginVerify(req, response);
         } catch (UsernameNotFoundException e) {
@@ -97,11 +91,8 @@ public class AuthController {
 
     @PostMapping("/oauth2/callback")
     public ResponseEntity<?> oauth2Callback(@RequestBody Map<String, String> body, HttpServletResponse response) {
-        System.out.println("[OAUTH2 CALLBACK] Received body: " + body);
-
         String token = body.get("token");
         if (token == null) {
-            System.out.println("[OAUTH2 CALLBACK] Error: Missing token");
             return ResponseEntity.badRequest().build();
         }
 
@@ -112,7 +103,6 @@ public class AuthController {
                 .sameSite(cookies_samesite)
                 .maxAge(60 * 60 * 24 * 7)
                 .build();
-        System.out.println("Cookies auth controller = " + cookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         return ResponseEntity.ok().build();
@@ -120,16 +110,12 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<AuthResponse> logout(HttpServletResponse response) {
-        System.out.println("[LOGOUT] Logout requested");
-
         authService.logoutUser(response);
         return ResponseEntity.ok(new AuthResponse("Logged out successfully", null));
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<AuthResponse> forgotPassword(@RequestBody Map<String, String> body) {
-        System.out.println("[FORGOT PASSWORD] Request body: " + body);
-
         try {
             String email = body.get("email");
             if (email == null || email.isEmpty()) {
@@ -147,8 +133,6 @@ public class AuthController {
 
     @PostMapping("/reset-password")
     public ResponseEntity<AuthResponse> resetPassword(@RequestBody Map<String, String> body) {
-        System.out.println("[RESET PASSWORD] Request body: " + body);
-
         try {
             String token = body.get("token");
             String newPassword = body.get("newPassword");
@@ -170,8 +154,6 @@ public class AuthController {
 
     @PostMapping("/change-password")
     public ResponseEntity<AuthResponse> changePassword(@RequestBody Map<String, String> body) {
-        System.out.println("[CHANGE PASSWORD] Request body: " + body);
-
         try {
             String oldPassword = body.get("oldPassword");
             String newPassword = body.get("newPassword");
@@ -194,9 +176,6 @@ public class AuthController {
     @PostMapping("/refresh-token")
     public ResponseEntity<AuthResponse> refreshToken(
             @CookieValue(name = "refresh_token", required = false) String refreshToken) {
-
-        System.out.println("[REFRESH TOKEN] refresh_token cookie: " + refreshToken);
-
         return authService.refreshToken(refreshToken);
     }
 }

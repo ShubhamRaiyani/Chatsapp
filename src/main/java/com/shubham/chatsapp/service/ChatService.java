@@ -4,6 +4,8 @@ import com.google.gson.internal.GsonTypes;
 import com.shubham.chatsapp.dto.ChatDTO;
 import com.shubham.chatsapp.dto.ChatDetailsDTO;
 import com.shubham.chatsapp.dto.GroupCreateRequest;
+import com.shubham.chatsapp.dto.MessageDTO;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import com.shubham.chatsapp.entity.*;
 import com.shubham.chatsapp.enums.StatusType;
 import com.shubham.chatsapp.repository.*;
@@ -29,15 +31,18 @@ public class ChatService {
     private final MessageRepository messageRepository;
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public ChatService(UserRepository userRepository, ChatRepository chatRepository,
                        MessageRepository messageRepository, GroupRepository groupRepository,
-                       GroupMemberRepository groupMemberRepository) {
+                       GroupMemberRepository groupMemberRepository,
+                       SimpMessagingTemplate messagingTemplate) {
         this.userRepository = userRepository;
         this.chatRepository = chatRepository;
         this.messageRepository = messageRepository;
         this.groupRepository = groupRepository;
         this.groupMemberRepository = groupMemberRepository;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @Transactional
@@ -325,6 +330,54 @@ public class ChatService {
 
         log.error("❌ Chat or Group not found for chatId={}", chatId);
         throw new NoSuchElementException("Chat or Group not found");
+    }
+
+    @Transactional
+    public void addMembersToGroup(UUID groupId, String adderEmail, List<String> newMemberEmails) {
+        User adder = userRepository.findByEmail(adderEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        groupMemberRepository.findByGroupAndUser(group, adder)
+                .orElseThrow(() -> new RuntimeException("You are not a member of this group"));
+
+        List<String> addedEmails = new ArrayList<>();
+        for (String email : newMemberEmails) {
+            User newMember = userRepository.findByEmail(email).orElse(null);
+            if (newMember == null) continue;
+            if (groupMemberRepository.findByGroupAndUser(group, newMember).isPresent()) continue;
+
+            GroupMember gm = new GroupMember();
+            gm.setGroup(group);
+            gm.setUser(newMember);
+            gm.setRole("MEMBER");
+            gm.setJoinedAt(Instant.now());
+            gm.setLastseenAt(Instant.now());
+            groupMemberRepository.save(gm);
+            addedEmails.add(email);
+        }
+
+        if (!addedEmails.isEmpty()) {
+            Message msg = new Message();
+            msg.setSender(adder);
+            msg.setGroup(group);
+            msg.setContent(adder.getUsername() + " added " + String.join(", ", addedEmails));
+            msg.setCreatedAt(LocalDateTime.now());
+            msg.setMessageType("TEXT");
+            Message saved = messageRepository.save(msg);
+            log.info("User {} added {} to group {}", adderEmail, addedEmails, group.getName());
+
+            // Broadcast so all online members see it immediately
+            MessageDTO broadcast = new MessageDTO();
+            broadcast.setMessageId(saved.getId());
+            broadcast.setContent(saved.getContent());
+            broadcast.setSenderEmail(adder.getEmail());
+            broadcast.setGroupId(group.getId());
+            broadcast.setSentAt(saved.getCreatedAt());
+            broadcast.setMessageType("TEXT");
+            messagingTemplate.convertAndSend("/topic/group/" + group.getId(), broadcast);
+        }
     }
 
     @Transactional

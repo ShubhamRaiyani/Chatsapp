@@ -54,13 +54,11 @@ public class WebSocketSessionTracker {
         try {
             String redisUserId = redisTemplate.opsForValue().get("session:" + sessionId);
             String email = redisTemplate.opsForValue().get("sessionEmail:" + sessionId);
-            log.info("User id from the session: {}", redisUserId);
 
             if (redisUserId != null) {
-                Boolean deleted = redisTemplate.delete("session:" + sessionId);
+                redisTemplate.delete("session:" + sessionId);
                 redisTemplate.delete("sessionEmail:" + sessionId);
                 redisTemplate.opsForSet().remove("session:all", sessionId);
-                log.warn("Deleted session:{} -> {}", sessionId, deleted);
 
                 Set<String> allSessions = redisTemplate.opsForSet().members("session:all");
 
@@ -79,9 +77,7 @@ public class WebSocketSessionTracker {
                         redisTemplate.opsForSet().remove("connectedUsers", userId.toString());
                         if (email != null) {
                             redisTemplate.opsForSet().remove(ONLINE_EMAIL_KEY, email);
-                            log.warn("Removed email {} from online set", email);
                         }
-                        log.warn("Removed user {} from online set", userId);
                     }
                 }
             }
@@ -92,9 +88,8 @@ public class WebSocketSessionTracker {
 
 
     public void addSubscription(String sessionId, UUID userId, UUID chatId) {
-        redisTemplate.opsForSet().add("user:" + userId + ":chats",chatId.toString());
+        redisTemplate.opsForSet().add("user:" + userId + ":chats", chatId.toString());
         redisTemplate.opsForSet().add("session:" + sessionId + ":chats", chatId.toString());
-        log.warn("Added chat {} to user {} and session {}", chatId, userId, sessionId);
 
     }
     public void removeChatSubscriptionsForSession(String sessionId) {
@@ -120,36 +115,26 @@ public class WebSocketSessionTracker {
                 }
             }
             redisTemplate.delete(sessionGroupsKey);
-
-            log.warn("Removed chat and group subscriptions for session: {}", sessionId);
         }
     }
 
     public boolean isUserConnected(UUID userId) {
-        Boolean result =Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(ONLINE_USER_KEY, String.valueOf(userId)));
-        System.out.println("Isuserconnected "+ result);
-        return result;
-
+        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(ONLINE_USER_KEY, String.valueOf(userId)));
     }
+
     public boolean isUserSubscribedToChat(UUID userId, UUID chatId) {
-        Boolean result = Boolean.TRUE.equals(redisTemplate.opsForSet().isMember("user:" + String.valueOf(userId) + ":chats", String.valueOf(chatId)));
-        System.out.println("is subscribed "+ result);
-
-        return result;
+        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(
+                "user:" + userId + ":chats", String.valueOf(chatId)));
     }
+
     public boolean isUserSubscribedToGroup(UUID userId, UUID groupId) {
-        // Check if user has subscribed to /topic/group/{groupId}
-        Boolean result = Boolean.TRUE.equals(
-                redisTemplate.opsForSet().isMember("user:" + userId.toString() + ":groups", groupId.toString())
-        );
-        System.out.println("is subscribed to group: " + result);
-        return result;
+        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(
+                "user:" + userId + ":groups", groupId.toString()));
     }
 
     public void addGroupSubscription(String sessionId, UUID userId, UUID groupId) {
         redisTemplate.opsForSet().add("user:" + userId + ":groups", groupId.toString());
         redisTemplate.opsForSet().add("session:" + sessionId + ":groups", groupId.toString());
-        log.warn("Added group {} to user {} and session {}", groupId, userId, sessionId);
     }
 
 

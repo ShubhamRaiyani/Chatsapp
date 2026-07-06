@@ -43,9 +43,22 @@ public class ChatController {
     public ResponseEntity<ChatDetailsDTO> getChatDetails(
             @PathVariable UUID chatId,
             @RequestParam String currentUserEmail) {
-        System.out.println("inside the controller ");
         ChatDetailsDTO details = chatService.getChatDetails(chatId, currentUserEmail);
         return ResponseEntity.ok(details);
+    }
+
+    @PostMapping("/group/{groupId}/members")
+    public ResponseEntity<?> addGroupMembers(
+            @PathVariable UUID groupId,
+            @RequestBody List<String> emails,
+            Authentication authentication) {
+        String currentUserEmail = authentication.getName();
+        try {
+            chatService.addMembersToGroup(groupId, currentUserEmail, emails);
+            return ResponseEntity.ok("Members added successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/group/{groupId}/leave")

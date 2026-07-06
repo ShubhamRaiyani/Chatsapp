@@ -52,8 +52,6 @@ public class MessageService {
         message.setSender(sender);
         message.setMessageType(request.getMessageType());
 
-        System.out.println(">>> sendMessage() called for: " + senderEmail);
-
         if (request.getChatId() != null) {
             // Handle Direct Message
             User receiver = userRepository.findByEmail(request.getReceiverEmail())
@@ -66,7 +64,6 @@ public class MessageService {
             message.setReceiver(receiver);
 
             Message savedMessage = messageRepository.save(message);
-            System.out.println(">>> Direct message saved: " + savedMessage.getId());
 
             // Create single status for direct message
             createDirectMessageStatus(savedMessage, receiver);
@@ -82,7 +79,6 @@ public class MessageService {
             // No single receiver for group messages
 
             Message savedMessage = messageRepository.save(message);
-            System.out.println(">>> Group message saved: " + savedMessage.getId());
 
             // Create status for all group members except sender
             createGroupMessageStatuses(savedMessage, group, sender);
@@ -105,7 +101,6 @@ public class MessageService {
         status.setUpdatedAt(Instant.now());
 
         messageStatusRepository.save(status);
-        System.out.println(">>> Direct message status created for: " + receiver.getEmail());
     }
 
     /**
@@ -113,8 +108,6 @@ public class MessageService {
      */
     private void createGroupMessageStatuses(Message message, Group group, User sender) {
         List<User> groupMembers = getGroupMembers(group.getId());
-
-        System.out.println(">>> Creating statuses for " + groupMembers.size() + " group members");
 
         for (User member : groupMembers) {
             // Skip the sender - they don't need a status for their own message
@@ -126,7 +119,6 @@ public class MessageService {
                 status.setUpdatedAt(Instant.now());
 
                 messageStatusRepository.save(status);
-                System.out.println(">>> Group message status created for: " + member.getEmail());
             }
         }
     }

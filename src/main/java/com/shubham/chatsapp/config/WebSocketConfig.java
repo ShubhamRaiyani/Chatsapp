@@ -1,6 +1,7 @@
 package com.shubham.chatsapp.config;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
@@ -16,6 +17,7 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+@Slf4j
 @Configuration
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
@@ -53,9 +55,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         var user = accessor.getSessionAttributes().get("user");
                         if (user instanceof Authentication auth && auth.isAuthenticated()) {
                             accessor.setUser(auth);
-                            System.out.println("✅ STOMP user set: " + auth.getName());
                         } else {
-                            System.out.println("❌ STOMP CONNECT rejected: No authentication");
+                            log.warn("STOMP CONNECT rejected: no authentication");
                             return null;
                         }
                     } else if (accessor.getUser() == null) {
@@ -63,7 +64,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         if (user instanceof Authentication auth && auth.isAuthenticated()) {
                             accessor.setUser(auth);
                         } else {
-                            System.out.println("❌ STOMP frame rejected: No user authentication");
                             return null;
                         }
                     }
