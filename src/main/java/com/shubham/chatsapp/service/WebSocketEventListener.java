@@ -1,5 +1,6 @@
 package com.shubham.chatsapp.service;
 
+import com.shubham.chatsapp.dto.PresenceEventDTO;
 import com.shubham.chatsapp.entity.User;
 import com.shubham.chatsapp.repository.UserRepository;
 import com.shubham.chatsapp.service.WebSocketSessionTracker;
@@ -7,6 +8,7 @@ import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.*;
@@ -22,6 +24,7 @@ public class WebSocketEventListener {
     private final WebSocketSessionTracker tracker;
     private final MessageStatusService  messageStatusService;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @EventListener
     public void handleConnect(@Nonnull SessionConnectEvent event) {
@@ -29,14 +32,19 @@ public class WebSocketEventListener {
         StompHeaderAccessor sha = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = sha.getSessionId();
         String userId = sha.getUser() != null ? sha.getUser().getName() : null;
-        log.info("📥 USERID OF USER CONNECTED {}",userId);
+        log.info("📥 USERID OF USER CONNECTED {}", userId);
         if (userId != null) {
-            User byEmail = userRepository.findByEmail(userId).orElseThrow(()-> new IllegalArgumentException("Email from the websocket is not valid"));
-            tracker.registerSession(sessionId, byEmail.getId());
+            User byEmail = userRepository.findByEmail(userId).orElseThrow(() -> new IllegalArgumentException("Email from the websocket is not valid"));
+            tracker.registerSession(sessionId, byEmail.getId(), userId);
             log.info("User {} CONNECTED with session {}", userId, sessionId);
+
+            PresenceEventDTO presence = new PresenceEventDTO();
+            presence.setType("PRESENCE");
+            presence.setUserId(userId);
+            presence.setOnline(true);
+            messagingTemplate.convertAndSend("/topic/presence", presence);
         }
         messageStatusService.markMessagesDelivered(userId);
-
     }
 
     @EventListener
@@ -75,14 +83,24 @@ public class WebSocketEventListener {
     }
 
     @EventListener
-public void handleDisconnect(@Nonnull SessionDisconnectEvent event) {
-    log.info("DISCONNECT EVENT RECEIVED");
-
+    public void handleDisconnect(@Nonnull SessionDisconnectEvent event) {
+        log.info("DISCONNECT EVENT RECEIVED");
         StompHeaderAccessor sha = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = sha.getSessionId();
         String userId = sha.getUser() != null ? sha.getUser().getName() : null;
-        User byEmail = userRepository.findByEmail(userId).orElseThrow(()-> new IllegalArgumentException("Email from the websocket is not valid"));
-        tracker.removeSession(sessionId,byEmail.getId());
+        if (userId == null) return;
+
+        User byEmail = userRepository.findByEmail(userId).orElseThrow(() -> new IllegalArgumentException("Email from the websocket is not valid"));
+        tracker.removeSession(sessionId, byEmail.getId());
+
+        // Only broadcast offline if this was the user's last active session
+        if (!tracker.isUserConnected(byEmail.getId())) {
+            PresenceEventDTO presence = new PresenceEventDTO();
+            presence.setType("PRESENCE");
+            presence.setUserId(userId);
+            presence.setOnline(false);
+            messagingTemplate.convertAndSend("/topic/presence", presence);
+        }
     }
 
     @EventListener

@@ -35,28 +35,33 @@ public class WebSocketSessionTracker {
     private StringRedisTemplate redisTemplate;
 
     private static final String ONLINE_USER_KEY = "connectedUsers";
+    private static final String ONLINE_EMAIL_KEY = "connectedEmails";
 
-    public void registerSession(String sessionId , UUID userId){
-        redisTemplate.opsForSet().add(ONLINE_USER_KEY , userId.toString());
-//        redisTemplate.opsForValue().set("session:"+sessionId , userId.toString());
+    public void registerSession(String sessionId, UUID userId, String email) {
+        redisTemplate.opsForSet().add(ONLINE_USER_KEY, userId.toString());
+        redisTemplate.opsForSet().add(ONLINE_EMAIL_KEY, email);
         redisTemplate.opsForValue().set("session:" + sessionId, userId.toString());
+        redisTemplate.opsForValue().set("sessionEmail:" + sessionId, email);
         redisTemplate.opsForSet().add("session:all", sessionId);
+    }
 
-
+    public Set<String> getAllOnlineEmails() {
+        Set<String> members = redisTemplate.opsForSet().members(ONLINE_EMAIL_KEY);
+        return members != null ? members : new java.util.HashSet<>();
     }
 
     public void removeSession(String sessionId, UUID userId) {
         try {
             String redisUserId = redisTemplate.opsForValue().get("session:" + sessionId);
+            String email = redisTemplate.opsForValue().get("sessionEmail:" + sessionId);
             log.info("User id from the session: {}", redisUserId);
 
             if (redisUserId != null) {
-                // Delete the session key
                 Boolean deleted = redisTemplate.delete("session:" + sessionId);
-                redisTemplate.opsForSet().remove("session:all", sessionId); // 💡 remove from tracking set
+                redisTemplate.delete("sessionEmail:" + sessionId);
+                redisTemplate.opsForSet().remove("session:all", sessionId);
                 log.warn("Deleted session:{} -> {}", sessionId, deleted);
 
-                // Get all remaining session IDs
                 Set<String> allSessions = redisTemplate.opsForSet().members("session:all");
 
                 if (allSessions != null) {
@@ -71,8 +76,12 @@ public class WebSocketSessionTracker {
                     });
 
                     if (!stillOnline) {
-                        Long removed = redisTemplate.opsForSet().remove("connectedUsers", userId.toString());
-                        log.warn("Removed user {} from online set: {}", userId, removed);
+                        redisTemplate.opsForSet().remove("connectedUsers", userId.toString());
+                        if (email != null) {
+                            redisTemplate.opsForSet().remove(ONLINE_EMAIL_KEY, email);
+                            log.warn("Removed email {} from online set", email);
+                        }
+                        log.warn("Removed user {} from online set", userId);
                     }
                 }
             }

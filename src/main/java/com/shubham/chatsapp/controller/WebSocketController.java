@@ -2,6 +2,7 @@ package com.shubham.chatsapp.controller;
 
 import com.shubham.chatsapp.dto.MessageDTO;
 import com.shubham.chatsapp.dto.ReadReceiptDTO;
+import com.shubham.chatsapp.dto.TypingEventDTO;
 import com.shubham.chatsapp.entity.Message;
 import com.shubham.chatsapp.entity.User;
 import com.shubham.chatsapp.repository.UserRepository;
@@ -69,6 +70,18 @@ public class WebSocketController {
             }
         } else {
             System.out.println("Receiver is offline, status remains SENT");
+        }
+    }
+
+    @MessageMapping("/typing")
+    public void handleTyping(@Payload TypingEventDTO event, Authentication authentication) {
+        event.setType("TYPING");
+        event.setUserId(authentication.getName()); // enforce server-side identity
+
+        if (event.getChatId() != null && !event.getChatId().isBlank()) {
+            messagingTemplate.convertAndSend("/topic/chat/" + event.getChatId(), event);
+        } else if (event.getGroupId() != null && !event.getGroupId().isBlank()) {
+            messagingTemplate.convertAndSend("/topic/group/" + event.getGroupId(), event);
         }
     }
 
