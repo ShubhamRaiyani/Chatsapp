@@ -3,6 +3,7 @@ package com.shubham.chatsapp.controller;
 import com.shubham.chatsapp.dto.MessageDTO;
 import com.shubham.chatsapp.dto.ReadReceiptDTO;
 import com.shubham.chatsapp.dto.TypingEventDTO;
+import com.shubham.chatsapp.dto.WebRTCSignalDTO;
 import com.shubham.chatsapp.entity.Message;
 import com.shubham.chatsapp.entity.User;
 import com.shubham.chatsapp.repository.UserRepository;
@@ -64,6 +65,13 @@ public class WebSocketController {
                 messageStatusService.markDelivered(savedMessage, receiverUser);
             }
         }
+    }
+
+    @MessageMapping("/call.signal")
+    public void handleCallSignal(@Payload WebRTCSignalDTO signal, Authentication authentication) {
+        // Always enforce identity server-side — never trust fromEmail from the client
+        signal.setFromEmail(authentication.getName());
+        messagingTemplate.convertAndSendToUser(signal.getToEmail(), "/queue/call", signal);
     }
 
     @MessageMapping("/typing")
