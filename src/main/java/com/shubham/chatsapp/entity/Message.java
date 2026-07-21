@@ -41,8 +41,15 @@ public class Message {
 
     private String messageType; // TEXT, IMAGE, VIDEO, etc.
 
+    private boolean edited = false;
+
     @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<MessageStatus> statuses = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reply_to_id")
+    @ToString.Exclude
+    private Message replyTo;
 
     @Override
     public String toString() {

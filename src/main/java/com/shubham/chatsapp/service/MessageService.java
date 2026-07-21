@@ -52,6 +52,11 @@ public class MessageService {
         message.setSender(sender);
         message.setMessageType(request.getMessageType());
 
+        if (request.getReplyToId() != null) {
+            messageRepository.findById(request.getReplyToId())
+                    .ifPresent(message::setReplyTo);
+        }
+
         if (request.getChatId() != null) {
             // Handle Direct Message
             User receiver = userRepository.findByEmail(request.getReceiverEmail())
@@ -158,13 +163,35 @@ public class MessageService {
         dto.setSentAt(message.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime());
         dto.setSenderEmail(message.getSender().getEmail());
         dto.setMessageType(message.getMessageType());
+        dto.setEdited(message.isEdited());
 
         // Add receiver email for direct messages only
         if (message.getReceiver() != null) {
             dto.setReceiverEmail(message.getReceiver().getEmail());
         }
 
+        if (message.getReplyTo() != null) {
+            Message replied = message.getReplyTo();
+            dto.setReplyToId(replied.getId());
+            dto.setReplyToContent(replied.getContent());
+            dto.setReplyToSenderEmail(replied.getSender().getEmail());
+        }
+
         return dto;
+    }
+
+    @Transactional
+    public MessageDTO editMessage(UUID messageId, String newContent, String senderEmail) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Message not found"));
+
+        if (!message.getSender().getEmail().equals(senderEmail)) {
+            throw new SecurityException("You can only edit your own messages");
+        }
+
+        message.setContent(newContent);
+        message.setEdited(true);
+        return mapToDTO(messageRepository.save(message));
     }
 
     public Message getMessageFromMessageDTO(MessageDTO savedMessageDTO) {

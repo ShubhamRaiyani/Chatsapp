@@ -49,6 +49,20 @@ public class MessageController {
     ) {
         return messageService.getMessagesForGroup(groupId, page, size);
     }
+    @PatchMapping("/{messageId}")
+    public ResponseEntity<MessageDTO> editMessage(
+            @PathVariable UUID messageId,
+            @RequestBody java.util.Map<String, String> body,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        String newContent = body.get("content");
+        if (newContent == null || newContent.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        MessageDTO updated = messageService.editMessage(messageId, newContent.trim(), userDetails.getUsername());
+        return ResponseEntity.ok(updated);
+    }
+
     // NEW: cursor-based endpoint for personal chat
     @GetMapping("/chat/{chatId}/cursor")
     public CursorMessagePageDTO getChatMessagesCursor(

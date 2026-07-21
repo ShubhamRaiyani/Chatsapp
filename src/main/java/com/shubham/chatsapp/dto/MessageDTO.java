@@ -21,4 +21,11 @@ public class MessageDTO {
     private LocalDateTime sentAt;
     private String messageType;
 
+    private boolean edited;
+
+    // Reply fields — populated from the referenced message
+    private UUID replyToId;
+    private String replyToContent;
+    private String replyToSenderEmail;
+
 }
